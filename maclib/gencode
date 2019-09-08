@@ -1,0 +1,90 @@
+         MACRO                                                          00000100
+         GENCODE &INST,&LBL,&TYPE                                       00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.* MACRO:      GENCODE--GENERATE INSTRUCTION OF COND PARAMETER LIST.  * 00000140
+.*                                                                    * 00000150
+.* FUNCTION:   TO PARSE THE INSTRUCTION SUBLIST PASSED AND GENERATE   * 00000160
+.*             THE PROPER CONDITIONAL BRANCH ACCORDING TO PARAMETERS  * 00000170
+.*             PASSED.                                                * 00000180
+.*                                                                    * 00000190
+.* PARAMETERS:                                                        * 00000200
+.*                                                                    * 00000210
+.*         &INST   THE INSTRUCTION SUBLIST (EXACT ALLOWABLE FORMS     * 00000220
+.*                 SPECIFIED IN THE "NIU STRUCTURED MACROS" WRITEUP). * 00000230
+.*                                                                    * 00000240
+.*         &LBL    LABEL TO BE ATTACHED TO THE CONDITIONAL BRANCH.    * 00000250
+.*                                                                    * 00000260
+.*         &TYPE   IS EQUAL TO "NOT" WHEN CODED; SPECIFIES THAT BRANCH* 00000270
+.*                 TO BE TAKEN IF SPECIFIED CONDITION IS NOT TRUE.    * 00000280
+.*                                                                    * 00000290
+.* XREF:       MACROS USED--GETCC                                     * 00000300
+.*             MODULES CALLED--NONE                                   * 00000310
+.*                                                                    * 00000320
+.* AUTHOR:     DAVID T. CARPENTER.                                    * 00000330
+.*                                                                    * 00000340
+.* DATE:       10 OCTOBER 1976.                                       * 00000350
+.*                                                                    * 00000360
+.* SEE THE "NIU STRUCTURE MACROS"  WRITEUP FOR FURTHER DOCUMENTATION. * 00000370
+.*                                                                    * 00000380
+.********************************************************************** 00000390
+         GBLB  &ERRFLAG           INTERMACRO ERROR FLAG                 00000400
+         GBLB  &LBLFLAG           FLAG INDICATES USER MNEMONIC          00000410
+         GBLA  &CCVAL             RETURNED CC VALUE FROM GETCC          00000420
+         LCLA  &CCLOC             LOCATION OF CONDITION IN SUBSTRING    00000430
+         AIF   (N'&INST EQ 1).ISCC  IF SUBLTRING OF ONE-->.ISCC         00000440
+         AIF   ('&INST(1)'(1,1) EQ 'C').ISCOMP IF INST COMPARE-->ISCOMP 00000450
+         AIF   (N'&INST NE 5).CHKFOUR IF NOT 3-OP-->CHKFOUR             00000460
+         &INST(1) &INST(2),&INST(3),&INST(4)                            00000470
+&CCLOC   SETA  5                  CONDITION IS 5TH OF SUBSTRING         00000480
+         AGO   .CHKERR            GO TO .CHKERR                         00000490
+.CHKFOUR ANOP                                                           00000500
+         AIF   (N'&INST NE 4).CHKTRI  IF NOT 2-OP-->CHKTRI              00000510
+         &INST(1) &INST(2),&INST(3)                                     00000520
+&CCLOC   SETA  4                  CONDITION IS 4TH IN SUBSTRING         00000530
+         AGO   .CHKERR            GO TO .CHKERR                         00000540
+.CHKTRI  ANOP                                                           00000550
+         AIF   (N'&INST NE 3).BADLIST  IF NOT 1-OP-->BADLIST            00000560
+         &INST(1) &INST(2)                                              00000570
+&CCLOC   SETA  3                  CONDITION IS 3RD IN SUBSTRING         00000580
+         AGO   .CHKERR            GO TO .CHKERR                         00000590
+.BADLIST ANOP                                                           00000600
+         MNOTE 12,'*** IMPROPER NON-COMPARE SUBLIST ***'                00000610
+&ERRFLAG SETB  1                  SET &ERRFLAG=ON                       00000620
+         AGO   .CHKERR            GO TO .CHKERR                         00000630
+.ISCOMP  ANOP                                                           00000640
+         AIF   (N'&INST NE 5).CHEKFOR  IF NOT 3-OP-->CHEKFOR            00000650
+         &INST(1) &INST(2),&INST(3),&INST(5)                            00000660
+&CCLOC   SETA  4                  CONDITION IS 4TH IN SUBSTRING         00000670
+         AGO   .CHKERR            GO TO .CHKERR                         00000680
+.CHEKFOR ANOP                                                           00000690
+         AIF   (N'&INST NE 4).BADLST  IF NOT 2-OP-->BADLST              00000700
+         &INST(1) &INST(2),&INST(4)                                     00000710
+&CCLOC   SETA  3                  CONDITION IS 3RD IN SUBSTRING         00000720
+         AGO   .CHKERR            GO TO .CHKERR                         00000730
+.BADLST  ANOP                                                           00000740
+         MNOTE 12,'*** IMPROPER COMPARE SUBLIST ***'                    00000750
+&ERRFLAG SETB  1                  SET &ERRFLAG=ON                       00000760
+         AGO   .CHKERR            GO TO .CHKERR                         00000770
+.ISCC    ANOP                                                           00000780
+&CCLOC   SETA  1                  CONDITION IS THE SUBSTRING            00000790
+.CHKERR  ANOP                                                           00000800
+         AIF   (&ERRFLAG EQ 1).ISERR  IF ERROR-->ISERR                  00000810
+         GETCC &INST(&CCLOC)      CONVERT AND CHECK CONDITION VALUE     00000820
+         AIF   (&LBLFLAG EQ 1).ISLBL   IF USER MEM-->ISLBL              00000830
+         AIF   ('&TYPE' EQ 'NOT').GENNOT  IF A 'NOT'-->GENNOT           00000840
+         BC    &CCVAL,&LBL                                              00000850
+         MEXIT                                                          00000860
+.GENNOT  ANOP                                                           00000870
+         BC    15-&CCVAL,&LBL                                           00000880
+         MEXIT                                                          00000890
+.ISLBL   ANOP                                                           00000900
+&LBLFLAG SETB  0                  SET &LBLFLAG OFF                      00000910
+         AIF   ('&TYPE' EQ 'NOT').GENNLBL                               00000920
+         BC    &INST(&CCLOC),&LBL                                       00000930
+         MEXIT                                                          00000940
+.GENNLBL ANOP                                                           00000950
+         BC    15-&INST(&CCLOC),&LBL                                    00000960
+         MEXIT                                                          00000970
+.ISERR   ANOP                                                           00000980
+         MEND                                                           00000990

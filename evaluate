@@ -1,0 +1,108 @@
+         TITLE '***EVALUATE ROUTINE***'
+**********                                                              00134000
+*                                                                       00135000
+* THIS ROUTINE EVALUATES A BOARD.  THE EVALUATION IS GIVEN
+* AS A RATIO OF THE RELATIVE STRENGTH OF THE PROGRAM PIECES
+* TO THE PLAYER PIECES.  THE VALUES OF THE PIECES AND OF A GAME
+* WINNING BOARD ARE GIVEN IN THE VALCOMM AREA.
+*
+* INPUT - R1 -> CURRENT PARM BLOCK, BOARDIN THE BOARD TO BE EVALUATED
+*
+* OUTPUT - R0 = THE VALUE OF THE BOARD
+*                                                                       00139000
+**********                                                              00140000
+EVALUATE RSAVE
+         LR    R10,R1
+         USING GENPARM,R10        ADDRESS GENPARM                       00143000
+         L     R11,=V(VALCOMM)    ADDRESS MEMORY SAVE AREA
+         USING VALCOMM,R11
+*
+* COUNT THE PIECES ON THE BOARD.
+         LA    R7,BOARDIN         ADDRESS THE BOARD TO BE EVALUATED
+         SR    R6,R6              SET LOOP COUNTER
+         SR    R2,R2              INIT THE PIECE COUNTERS
+         SR    R3,R3
+         SR    R4,R4
+         SR    R5,R5
+         DO WHILE=(CH,R6,LT,=H'32')  COUNT EVERY PIECE
+           IF (CLI,0(R7),EQ,C'A')  BLACK KING?
+             LA    R2,1(R2)  INCR CNTR
+           ELSE
+             IF (CLI,0(R7),EQ,C'B')  BLACK PAWN?
+               LA    R3,1(R3)  INCR CNTR
+             ELSE
+               IF (CLI,0(R7),EQ,C'R')  RED PAWN?
+                 LA    R4,1(R4)
+               ELSE
+                 IF (CLI,0(R7),EQ,C'S')  RED KING?
+                   LA    R5,1(R5)
+                 ENDIF
+               ENDIF
+             ENDIF
+           ENDIF
+           LA    R6,1(R6)         UP LOOP COUNTER
+           LA    R7,1(R7)         ADDR NEXT LOCATION
+         ENDDO
+*
+* CHECK FOR AN END OF GAME CONDITION: NO PIECES OF ONE COLOR.
+         SR    R0,R0              INIT RETURN VALUE
+         IF (CH,R2,EQ,=H'0'),AND,(CH,R3,EQ,=H'0')  NO BLACK?
+           IF (CLI,PIECOLOR,EQ,C'B')  PGM HAS BLACK?
+             L     R0,VALYWIN     LOAD LOSS VALUE
+           ELSE
+             L     R0,VALIWIN     LOAD WIN VALUE
+           ENDIF
+         ELSE
+           IF (CH,R4,EQ,=H'0'),AND,(CH,R5,EQ,=H'0')  NO RED?
+             IF (CLI,PIECOLOR,EQ,C'B')  PGM HAS BLACK?
+               L     R0,VALIWIN   LOAD WIN VALUE
+             ELSE
+               L     R0,VALYWIN   LOAD LOSS VALUE
+             ENDIF
+           ELSE
+*
+* COMPUTE THE BOARD VALUE.
+*
+* START WITH BLACK POWER IN R2.
+             SR    R6,R6          COMPUTE BLACK KING POWER
+             LR    R7,R2
+             M     R6,VALBKING
+             LR    R2,R7
+             SR    R6,R6
+             LR    R7,R3
+             M     R6,VALBPAWN
+             AR    R2,R7
+*
+* COMPUTE RED STRENGTH IN R4.
+             LR    R7,R4
+             SR    R6,R6
+             M     R6,VALRPAWN
+             LR    R4,R7
+             LR    R7,R5
+             SR    R6,R6
+             M     R6,VALRKING
+             AR    R4,R7
+*
+* COMPUTE THE RATIO OF THE STRENGTHS.
+             SR    R6,R6
+             IF (CLI,PIECOLOR,EQ,C'R')  PGM HAS RED?
+               LR    R7,R4        LOAD RED POWER
+               M     R6,VALSCALE   SCALE THE DIVIDEND
+               DR    R6,R2        DIVIDE BY BLACK POWER
+             ELSE
+               LR    R7,R2        LOAD BLACK POWER
+               M     R6,VALSCALE  SCALE THE DIVIDEND
+               DR    R6,R4        DIVIDE BY RED POWER
+             ENDIF
+             LR    R0,R7          SET RETURN VALUE
+           ENDIF
+         ENDIF
+*
+         L     R13,4(R13)         ADDRESS CALLER SAVE AREA
+         LA    R1,72              FREE CURRENT SAVE AREA
+         FREESAVE
+         LM    R14,R15,12(R13)    RESTORE REGS EXCEPT R0
+         LM    R1,R12,24(R13)
+         BR    R14                RETURN
+         DROP
+         LTORG

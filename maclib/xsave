@@ -1,0 +1,22 @@
+         MACRO                                                          00010000
+&LABEL   XSAVE                                                          00020000
+.**********                                                             00030000
+.*                                                                      00040000
+.* THIS MACRO GENERATES CODE TO ESTABLISH A                             00050000
+.* SAVE AREA FOR CALLS TO SUBORDINATE ROUTINES.
+.*                                                                      00070000
+.**********                                                             00080000
+&LABEL   CSECT                                                          00090000
+         STM   R14,R15,12(R13)    SAVE THE REGISTERS                    00100000
+         STM   R0,R12,20(R13)          "                                00110000
+         LR    R12,R15            SET UP R12 AS PERMANENT               00120000
+         USING &LABEL,R12           BASE REGISTER                       00130000
+         CNOP  0,4
+         BAL   R1,*+76            BRANCH AROUND & ADDRESS SAVE AREA
+         DS    18F                                                      00016000
+         ST    R1,8(R13)          STORE FORWARD POINTER                 00170000
+         ST    R13,4(R1)          STORE BACKWARD POINTER                00180000
+         LR    R13,R1             ADDRESS NEW SAVE AREA                 00190000
+         L     R1,4(R13)          LOAD PARM ADDRESS                     00200000
+         L     R1,24(R1)
+         MEND                                                           00210000

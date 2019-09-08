@@ -1,0 +1,41 @@
+         MACRO                                                          00000100
+         DO    &WHILE=                                                  00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.*  MACRO:  DO                                                        * 00000140
+.*                                                                    * 00000150
+.*  FUNCTION:  THE DO MACRO FORMS THE INITIAL DELIMITER FOR A         * 00000160
+.*      DO-COND-ENDDO MACRO SEQUENCE.  IT PERFORMS THE STACK INITIAL- * 00000170
+.*      IZATION FUNCTIONS FOR THE SEQUENCE AND GENERATES AN END LABEL.* 00000180
+.*      IN ORDER TO ACCOMODATE THE CODING FORMAT FOR THE IBM CONCEPT  * 00000190
+.*      14 MACROS, ANY ARGUMENTS CODED WITH THE DO MACRO ARE PASSED   * 00000200
+.*      TO A GENERATED COND.                                          * 00000210
+.*                                                                    * 00000220
+.*  PARAMETERS:                                                       * 00000230
+.*                                                                    * 00000240
+.*     &WHILE=  A CONDITION IS CODED WITH THIS PARAMETER WHICH IS     * 00000250
+.*              PASSED TO A GENERATED COND.                           * 00000260
+.*                                                                    * 00000270
+.*  XREF:  MACROS USED - PUSHNEST, EXLBL.                             * 00000280
+.*                                                                    * 00000290
+.********************************************************************** 00000300
+         GBLB  &FIRSTC            FLAG INDICATING START OF SEQUENCE     00000310
+         AIF   (&FIRSTC EQ 0).DOK IF NOT ON PROCEED NORMALLY            00000320
+         MNOTE 12,'***ERROR: DO OCCURS IMMEDIATELY AFTER DO OR IF***'   00000330
+         AGO   .END                                                     00000340
+.DOK     ANOP                                                           00000350
+&FIRSTC  SETB  1                  TURN ON &FIRSTC                       00000360
+         PUSHNEST DO              INITIALIZE STACKS                     00000370
+         EXLBL DOIF               GENERATE THE DO LABEL                 00000380
+         AIF   (N'&SYSLIST EQ 0 AND '&WHILE' EQ '').END IF NO ARGS EXIT 00000390
+         AIF   ('&WHILE' EQ '').MULTARG  MULTIPLE ARGS GIVEN            00000400
+         COND  &WHILE             PASS ARGS TO COND                     00000410
+         AGO   .END               THEN LEAVE                            00000420
+.MULTARG COND &SYSLIST(2),&SYSLIST(3),&SYSLIST(4),&SYSLIST(5),         X00000430
+               &SYSLIST(6),&SYSLIST(7),&SYSLIST(8),&SYSLIST(9),        X00000440
+               &SYSLIST(10),&SYSLIST(11),&SYSLIST(12),&SYSLIST(13),    X00000450
+               &SYSLIST(14),&SYSLIST(15),&SYSLIST(16),&SYSLIST(17),    X00000460
+               &SYSLIST(18),&SYSLIST(19),&SYSLIST(20),&SYSLIST(21),    X00000470
+               &SYSLIST(22),&SYSLIST(23),&SYSLIST(24),&SYSLIST(25),    X00000480
+               &SYSLIST(26)                                             00000490
+.END     MEND                                                           00000500

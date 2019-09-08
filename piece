@@ -1,0 +1,230 @@
+         TITLE '***PIECE ROUTINE***'
+**********                                                              00020000
+*                                                                       00030000
+* THIS ROUTINE EVALUATES THE POSSIBLE MOVES OF A GIVEN PIECE ON A GIVEN 00040000
+* BOARD.  THE ENTRY/EXIT PARAMETERS ARE OUTLINED IN THE GENPARM DSECT.  00050000
+*                                                                       00060000
+**********                                                              00070000
+PIECE   RSAVE
+        LR    R10,R1             ADDRESS PARM LIST
+        LR    R11,R10            SAVE THIS ADDRESS
+        USING GENPARM,R10
+*
+* OBTAIN A PARM BLOCK FOR LATER SUB-ROUTINE CALLS.
+        LA    R1,85              LOAD BLOCK LENGTH
+        GETCORE                  GET THE BLOCK
+        LR    R7,R1              SAVE PARM BLOCK ADDRESS
+*
+* EXAMINE THE POSSIBLE MOVES FOR THE INPUT PIECE.
+        SR    R3,R3              SET FIRST VECTOR TO BE EXAMINED
+         LA    R5,BOARDIN        ADDRESS BOARD
+         L     R4,MOVPIEC        ADDRESS PIECE
+         AR    R5,R4
+        DO WHILE=(CH,R3,LT,=H'4')  EXAMINE ALL VECTORS
+*
+* CHECK FOR END OF MOVE LOOKS DUE TO PIECE NOT BEING KING.
+          IF (CH,R3,GT,=H'1'),AND,(CLI,0(R5),NE,C'S'),AND,             X
+               (CLI,0(R5),NE,C'A')
+            LA    R3,4           SET VALUE TO LEAVE LOOP
+          ELSE
+*
+* COPY PARMS AND CALL PROCPATH TO GET VECTOR DATA.
+            MVC   0(85,R7),0(R10)  COPY INPUT PARMS
+            L     R15,=V(PROCPATH)
+            BALR  R14,R15          CALL PROCPATH FOR VECTOR DATA
+*
+* IS THIS MOVE A SIMPLE MOVE?
+            LA    R6,BOARDIN    ADDRESS VECTOR 2
+            AR    R6,R8
+            IF (CLI,0(R6),EQ,C' '),AND,(CLI,JUMPFLG,EQ,X'00'),         X
+               AND,(CH,R8,NE,=H'99')
+*
+* YES - MAKE THE MOVE AND EVALUATE IT.
+              MVC   0(85,R7),0(R10)   COPY PARMS
+              LR    R10,R7        ADDRESS SUBROUTINE PARMS
+              LA    R15,BOARDIN   ADDRESS PARM BOARD
+              LA    R14,BOARDIN
+              AR    R14,R8        ADDRESS VECTOR 2 LOCATION
+              A     R15,MOVPIEC   ADDRESS MOVED PIECE
+              MVC   0(1,R14),0(R15)  MAKE THE SIMPLE MOVE
+              MVI   0(R15),C' '
+*
+* CHECK FOR KING-ME MOVE
+               IF (CLI,0(R14),EQ,C'R'),AND,(CH,R8,GT,=H'27')  KING RED?
+                 MVI   0(R14),C'S'    KING THE RED PIECE
+               ENDIF
+               IF (CLI,0(R14),EQ,C'B'),AND,(CH,R8,LT,=H'4') KING BLACK?
+                 MVI   0(R14),C'A'    KING THE BLACK PIECE
+               ENDIF
+*
+* CHECK IF EVALUATE OR BOARD TO BE CALLED.
+              L     R15,LEVELOOK   CHECK LEVEL LIMIT
+              IF (LTR,R15,R15,Z)   END OF LEVELS?
+*
+* CALL EVALUATE FOR BOARD
+                LR    R1,R10       SET UP EVALUATE INPUT PARM
+                L     R15,=V(EVALUATE)
+                BALR  R14,R15      CALL EVALUATE  (R0 = RETURNED VALUE)
+              ELSE
+*
+* CALL BOARD FOR RECURSIVE LOOK-AHEAD.
+                AH    R15,=H'-1'  DECREMENT LOOK-AHEAD LIMIT
+                ST    R15,LEVELOOK
+                MVI   MOVMADE,X'00'  INIT MOVE MADE INDICATOR
+                MVI   ENDGAME,X'00'  INIT END OF GAME INDICATOR
+                MVI   JUMPFLG,X'00'  INIT JUMP FLAG
+                IF (CLI,MOVTYPE,EQ,C'A')  PROGRAM'S MOVE NOW?
+                  MVI   MOVTYPE,C'B'  PLAYER MOVE NEXT
+                ELSE
+                  MVI   MOVTYPE,C'A'   PROGRAM MOVE
+                ENDIF
+                LR    R1,R7      SET PARM BLOCK ADDRESS
+                L     R15,=V(BOARD)
+                BALR  R14,R15    CALL BOARD
+                L     R0,BORDVALU   GET RETURNED BOARD VALUE
+              ENDIF
+*
+* SELECT THE BEST BOARD VALUE.
+              LA    R15,BOARDIN   ADDRESS BOARD WITH MOVE MADE
+              LR    R10,R11       ADDRESS ORIGINAL PARMS
+              IF (CLI,MOVMADE,EQ,X'00')  A MOVE MADE YET?
+                ST    R0,BORDVALU   SAVE BOARD VALUE
+                MVC   BOARDOUT(32),0(R15)  SAVE THE BOARD
+                MVI   MOVMADE,X'01'   INDICATE MOVE MADE
+                BAL   R6,PPRUNECK      CHECK FOR CUTOFF
+              ELSE
+                IF (CLI,MOVTYPE,EQ,C'A'),AND,(C,R0,GT,BORDVALU) BETTER?
+                  ST    R0,BORDVALU   SAVE THE VALUE
+                  MVC   BOARDOUT(32),0(R15)  SAVE THE BOARD
+                  BAL   R6,PPRUNECK      CHECK FOR CUTOFF
+                ELSE
+                  IF (CLI,MOVTYPE,EQ,C'B'),AND,(C,R0,LT,BORDVALU)
+                    ST    R0,BORDVALU   SAVE THE VALUE
+                    MVC   BOARDOUT(32),0(R15)  SAVE THE BOARD
+                    BAL   R6,PPRUNECK      CHECK FOR CUTOFF
+                  ENDIF
+                ENDIF
+              ENDIF
+*
+* CHECK FOR A JUMP MOVE.
+            ELSE
+              IF (CH,R8,NE,=H'99'),AND,(CH,R9,NE,=H'99')  CHECK NULL
+              LA    R6,BOARDIN   ADDRESS VECTOR 2
+              AR    R6,R8
+              LA    R14,BOARDIN  ADDRESS VECTOR 3
+              AR    R14,R9
+              IF  (CLI,0(R6),EQ,C'B'),OR,                              X
+               (CLI,0(R6),EQ,C'A'),ANDIF,                              X
+               (CLI,0(R5),EQ,C'R'),OR,(CLI,0(R5),EQ,C'S'),ANDIF,       X
+               (CLI,0(R14),EQ,C' '),ORIF,                              X
+               (CLI,0(R6),EQ,C'R'),OR,                                 X
+               (CLI,0(R6),EQ,C'S'),ANDIF,                              X
+               (CLI,0(R5),EQ,C'A'),OR,(CLI,0(R5),EQ,C'B'),ANDIF,       X
+               (CLI,0(R14),EQ,C' ')
+*
+* MAKE THE JUMP MOVE AND EVALUATE IT.
+                MVC   0(85,R7),0(R10)   COPY PARMS
+                LR    R10,R7     ADDRESS THE SUBROUTINE PARMS
+                LA    R14,BOARDIN   ADDRESS THE BOARD
+                AR    R14,R9        LOCATE THE END OF JUMP POSITION
+                LA    R15,BOARDIN
+                A     R15,MOVPIEC   ADDRESS MOVED PIECE
+                MVC   0(1,R14),0(R15)  MAKE THE MOVE
+                MVI   0(R15),C' '
+                LA    R6,BOARDIN  ADDRESS VECTOR 2
+                AR    R6,R8
+                MVI   0(R6),C' '   REMOVE JUMPED PIECE
+*
+* CHECK FOR A KING-ME MOVE
+                IF (CLI,0(R14),EQ,C'R'),AND,(CH,R9,GT,=H'27') KING RED?
+                  MVI   0(R14),C'S'      KING RED
+                ENDIF
+                IF (CLI,0(R14),EQ,C'B'),AND,(CH,R9,LT,=H'4') KING BLCK?
+                  MVI   0(R14),C'A'      YES - KING BLACK
+                ENDIF
+                MVI   MOVMADE,X'00'    INIT MOVE MADE INDICATOR
+                MVI   JUMPFLG,X'01'    INIT JUMP ONLY MOVE FLAG
+                ST    R9,MOVPIEC       STORE NEW MOVED PIECE
+                LR    R1,R7      ADDRESS PARMS FOR SUB CALL
+                L     R15,=V(PIECE)
+                BALR  R14,R15    CALL PIECE TO EVALUATE JUMP
+                IF (CLI,MOVMADE,EQ,X'00')  MOVE MADE?
+                  LR    R1,R10           ADDRESS BOARD AREA
+                  L     R15,=V(EVALUATE) EVALUATE THIS BOARD
+                  BALR  R14,R15
+                  L     R15,=V(VALCOMM)
+                  USING VALCOMM,R15
+                  IF (C,R0,NE,VALIWIN),AND,(C,R0,NE,VALYWIN)  NOT WIN?
+                    L     R15,LEVELOOK
+                    IF (LTR,R15,R15,NZ)   END OF LEVELS?
+*
+* CALL BOARD TO EVALUATE THE NEXT LEVEL.
+                      SH    R15,=H'1'    DECREMENT LEVELOOK
+                      ST    R15,LEVELOOK
+                      MVI   ENDGAME,X'00'   CLEAR END GAME FLAG
+                      IF (CLI,MOVTYPE,EQ,C'A')  SWITCH TURNS
+                        MVI   MOVTYPE,C'B'
+                      ELSE
+                        MVI   MOVTYPE,C'A'
+                      ENDIF
+                      LR    R1,R7       ADDRESS BOARD PARMS
+                      L     R15,=V(BOARD)   CALL BOARD
+                      BALR  R14,R15
+                      LA    R15,BOARDIN   ADDRESS INPUT BOARD
+                      L     R0,BORDVALU  GET RETURNED VALUE
+                    ELSE
+                      LA    R15,BOARDIN   ADDRESS INPUT BOARD
+                    ENDIF
+                  ELSE
+                    LA    R15,BOARDIN   ADDRESS INPUT BOARD
+                  ENDIF
+                ELSE
+                  L     R0,BORDVALU    GET RETURNED VALUE
+                  LA    R15,BOARDOUT   ADDRESS BOARD
+                ENDIF
+*
+* GET THE BEST MOVE.
+                LR    R10,R11       ADDRESS ORIGINAL PARMS
+                IF (CLI,MOVMADE,EQ,X'00')  A MOVE MADE YET?
+                  ST    R0,BORDVALU   SAVE BOARD VALUE
+                  MVC   BOARDOUT(32),0(R15)  SAVE THE BOARD
+                  MVI   MOVMADE,X'01'   INDICATE MOVE MADE
+                  BAL   R6,PPRUNECK      CHECK FOR CUTOFF
+                ELSE
+                  IF (CLI,MOVTYPE,EQ,C'A'),AND,(C,R0,GT,BORDVALU)
+                    ST    R0,BORDVALU   BETTER - SAVE THE VALUE
+                    MVC   BOARDOUT(32),0(R15)  SAVE THE BOARD
+                    BAL   R6,PPRUNECK      CHECK FOR CUTOFF
+                  ELSE
+                    IF (CLI,MOVTYPE,EQ,C'B'),AND,(C,R0,LT,BORDVALU)
+                      ST    R0,BORDVALU   SAVE THE VALUE
+                      MVC   BOARDOUT(32),0(R15)  SAVE THE BOARD
+                      BAL   R6,PPRUNECK      CHECK FOR CUTOFF
+                    ENDIF
+                  ENDIF
+                ENDIF
+              ENDIF
+              ENDIF
+            ENDIF
+          ENDIF
+*
+* EXAMINE THE NEXT VECTOR.
+          LA    R3,1(R3)       INCREMENT VECTOR POINTER
+        ENDDO
+*
+* FREE THE PARM BLOCK AND RETURN.
+         LA    R1,85              LOAD BLOCK LENGTH
+        FREECORE                 FREE THE BLOCK
+        RRETURN                  RETURN TO CALLER
+*
+* CHECK FOR CUTOFF.
+PPRUNECK DS    0H
+         LR    R1,R10       SET UP PARMS
+         L     R15,=V(PRUNE)  CALL PRUNE
+         BALR  R14,R15
+         IF (CH,R0,EQ,=H'1')   CUTOFF?
+           LA    R3,4          YES - SET END OF LOOP FLAG
+         ENDIF
+         BR    R6       RETURN
+        LTORG
+        DROP

@@ -1,0 +1,61 @@
+         TITLE '***PRUNE ROUTINE***'
+**********                                                              00134000
+*                                                                       00135000
+* THIS ROUTINE PERFORMS THE ALPHA-BETA PRUNING FUNCTIONS.
+*
+* INPUT - R1 -> CURRENT PARM BLOCK
+*
+* OUTPUT - R0 = 0, IF NO CUTOFF
+*               1, IF CUTOFF
+*                                                                       00139000
+**********                                                              00140000
+PRUNE RSAVE
+         LR    R10,R1
+         USING GENPARM,R10        ADDRESS GENPARM                       00143000
+         L     R7,=V(CORECOMM)    ADDRESS MEMORY SAVE AREA
+         USING CORECOMM,R7
+         L     R8,BLCKADDR        SET POINTER TO TOP OF PARM BLOCK
+         IF (CLI,MOVTYPE,EQ,C'B') AT MIN LEVEL?
+           SR    R2,R2            THEN INDICATE MIN LEVEL
+         ELSE
+           LA    R2,1             ELSE INDICATE MAX LEVEL
+         ENDIF
+         L     R5,BORDVALU        LOAD BOARD VALUE TO TEST
+         SR    R6,R6              SET LOOP INDICATOR
+         SR    R0,R0              INIT RETURN PARM TO 'NO CUTOFF'
+*
+* BEGIN MOVING UP THE CURRENT HIERARCHY OF SAVE AREAS, CHECKING FOR
+* A CUTOFF CONDITION.
+         DO WHILE=(LTR,R6,R6,Z)  LOOP UNTIL FLAG SET
+           S     R10,=F'85'      LOOK AT NEXT HIGHER LEVEL
+           IF (CR,R10,LT,R8)     ALL LEVEL CHECKED?
+             LA    R6,1          YES - SET END OF LOOP FLAG
+           ELSE
+             IF (CLI,MOVTYPE,EQ,C'A'),AND,(LTR,R2,R2,Z) MAX CHECKS MIN
+               IF (CLI,MOVMADE,EQ,X'01')  MOVE MADE AT LEVEL?
+                 IF (C,R5,LT,BORDVALU)   MAX GT MIN?
+                   LA    R0,1     INDICATE CUTOFF
+                   LA    R6,1       SET END LOOP FLAG
+                 ENDIF
+               ENDIF
+             ELSE
+             IF (CLI,MOVTYPE,EQ,C'B'),AND,(CH,R2,EQ,=H'1') MIN CHKS MAX
+                 IF (CLI,MOVMADE,EQ,X'01')  MOVE MADE?
+                   IF (C,R5,GT,BORDVALU)  MAX GT MIN?
+                     LA    R0,1     INDICATE CUTOFF
+                     LA    R6,1     SET END LOOP FLAG
+                   ENDIF
+                 ENDIF
+             ENDIF
+             ENDIF
+           ENDIF
+         ENDDO
+*
+         L     R13,4(R13)         ADDRESS CALLER SAVE AREA
+         LA    R1,72              FREE CURRENT SAVE AREA
+         FREESAVE
+         LM    R14,R15,12(R13)    RESTORE REGS EXCEPT R0
+         LM    R1,R12,24(R13)
+         BR    R14                RETURN
+         DROP
+         LTORG

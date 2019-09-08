@@ -1,0 +1,38 @@
+         MACRO                                                          00000100
+         IF                                                             00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.*  MACRO:  IF                                                        * 00000140
+.*                                                                    * 00000150
+.*  FUNCTION:  THE IF MACRO FORMS THE BEGINNING DELIMITER FOR A       * 00000160
+.*      STRUCTURED IF-COND-ENDIF MACRO SEQUENCE.  IT PERFORMS THE     * 00000170
+.*      INITIAL STACK PROCESSING FOR THE SEQUENCE.  IN ADDITION, IN   * 00000180
+.*      ORDER TO ACCOMODATE THE CODING FORMAT FOR THE IBM CONCEPT-14  * 00000190
+.*      MACROS, ANY ARGUMENTS CODED WITH THE IF MACRO ARE PASSED TO   * 00000200
+.*      A GENERATED COND.  A FLAG, &ARGS, IS ALSO SET TO INDICATE     * 00000210
+.*      THIS CONDTION.                                                * 00000220
+.*                                                                    * 00000230
+.*  PARAMETERS:  ARGUMENTS MAY BE PASSED THROUGH &SYSLIST.            * 00000240
+.*                                                                    * 00000250
+.*  XREF:  MACROS USED - PUSHNEST.                                    * 00000260
+.*                                                                    * 00000270
+.********************************************************************** 00000280
+         GBLB  &FIRSTC            FLAG TO SIGNAL START OF SEQUENCE      00000290
+         GBLB  &ARGS(50)          INDICATES SIMPLE IF-ELSE-ENDIF STRUC  00000300
+         GBLA  &LVLPTR            THE STACKS INDEX                      00000310
+         AIF   (&FIRSTC EQ 0).TURNON IF NOT PROCEED NORMALLY            00000320
+         MNOTE 12,'***ERROR: IF IMMEDIATELY FOLLOWS IF OR DO***'        00000330
+         AGO   .END               LEAVE                                 00000340
+.TURNON  ANOP                                                           00000350
+&FIRSTC  SETB  1                  TURN ON &FIRSTC                       00000360
+         PUSHNEST IF              INITIALIZE STACKS                     00000370
+         AIF   (N'&SYSLIST EQ 0).END IF NO ARGS, EXIT                   00000380
+&ARGS(&LVLPTR) SETB  1            TURN ON &ARGS FLAG                    00000390
+         COND  &SYSLIST(1),&SYSLIST(2),&SYSLIST(3),&SYSLIST(4),        X00000400
+               &SYSLIST(5),&SYSLIST(6),&SYSLIST(7),&SYSLIST(8),        X00000410
+               &SYSLIST(9),&SYSLIST(10),&SYSLIST(11),&SYSLIST(12),     X00000420
+               &SYSLIST(13),&SYSLIST(14),&SYSLIST(15),&SYSLIST(16),    X00000430
+               &SYSLIST(17),&SYSLIST(18),&SYSLIST(19),&SYSLIST(20),    X00000440
+               &SYSLIST(21),&SYSLIST(22),&SYSLIST(23),&SYSLIST(24),    X00000450
+               &SYSLIST(25)                                             00000460
+.END     MEND                                                           00000470

@@ -1,0 +1,36 @@
+         MACRO                                                          00000100
+         EXLBL &TYPE                                                    00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.*  MACRO:  EXLBL                                                     * 00000140
+.*                                                                    * 00000150
+.*  FUNCTION:  THE EXLBL MACRO IS AN INTERNALLY INVOKED SUPPORT       * 00000160
+.*      MACRO.  IT PERFORMS THE OPERATION OF CONDITIONALLY GENERATING * 00000170
+.*      TWO DIFFERENT TYPES OF END LABELS DEPENDING ON THE ARGUMENT   * 00000180
+.*      &TYPE.                                                        * 00000190
+.*                                                                    * 00000200
+.*  PARAMETERS:                                                       * 00000210
+.*                                                                    * 00000220
+.*     &TYPE  INDICATES THE TYPE OF INVOCATION:                       * 00000230
+.*            DOIF - CAUSES THE GENERATION OF A LABEL FROM THE DOIFEX * 00000240
+.*                STACK, WHICH IS THE LABEL ASSOCIATED WITH THE ENDIF * 00000250
+.*                OR DO MACROS.                                       * 00000260
+.*            COND - CAUSES THE GENERATION OF A LABEL FROM THE CONDEX * 00000270
+.*                STACK WHICH IS PART OF THE SEQUENCE OF LABELS       * 00000280
+.*                CARRIED BETWEEN CONDS.  AFTER GENERATION A NEW      * 00000290
+.*                UNIQUE LABEL IS PLACED ON THE STACK.                * 00000300
+.*                                                                    * 00000310
+.********************************************************************** 00000320
+         GBLA  &EXGEN             THE LABEL COUNTER                     00000330
+         GBLA  &LVLPTR            INDEX INTO THE STACKS                 00000340
+         GBLA  &DOIFEX(50)        STACK FOR $ENDIF AND $DO LABELS       00000350
+         GBLA  &CONDEX(50)        STACK FOR $COND END LABELS            00000360
+         GBLB  &EXCODE(50)        STACK FOR $DO OR $IF TYPE INDICATORS  00000370
+         AIF   ('&TYPE' NE 'DOIF').GENLBL  THEN WANT CONDEX LABEL       00000380
+@#EX&DOIFEX(&LVLPTR) EQU  *                                             00000390
+         AGO   .END               LEAVE                                 00000400
+.GENLBL  ANOP                                                           00000410
+@#EX&CONDEX(&LVLPTR) EQU  *                                             00000420
+&CONDEX(&LVLPTR) SETA &EXGEN      PLACE VALUE OF &EXGEN ON &CONDEX      00000430
+&EXGEN   SETA  &EXGEN+1           INCREMENT &EXGEN BY 1                 00000440
+.END     MEND                                                           00000450

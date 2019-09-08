@@ -1,0 +1,34 @@
+         MACRO                                                          00000100
+         ENDDO                                                          00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.*  MACRO:  ENDDO                                                     * 00000140
+.*                                                                    * 00000150
+.*  FUNCTION:  THE ENDDO MACRO FORMS THE ENDING DELIMITER FOR A       * 00000160
+.*      DO-COND-ENDDO MACRO SEQUENCE.  IT GENERATES AN END LABEL      * 00000170
+.*      AND DECREMENTS THE STACKS POINTER, CLEARING THE STACKS FOR    * 00000180
+.*      THIS SEQUENCE.                                                * 00000190
+.*                                                                    * 00000200
+.*  PARAMETERS:  NONE.                                                * 00000210
+.*                                                                    * 00000220
+.*  XREF:  MACROS USED - EXLBL.                                       * 00000230
+.*                                                                    * 00000240
+.********************************************************************** 00000250
+         GBLB  &EXCODE(50)        THE STACK FOR $IF OR $DO ID           00000260
+         GBLA  &LVLPTR            THE STACKS INDEX                      00000270
+         GBLA  &DOIFEX(50)        THE $DO OR $IF END LABEL STACK        00000280
+         GBLB  &FIRSTC            INDICATOR OF SEQUENCE START           00000290
+         AIF   (&LVLPTR GT 0).CHKF  CHECK INVALID STACK LEVEL           00000300
+         MNOTE 12,'***ERROR: UNMATCHED ENDDO***'                        00000310
+         AGO   .END                                                     00000320
+.CHKF    AIF   (&FIRSTC EQ 0).EOK  IF NOT ON PROCEED NORMALLY           00000330
+         MNOTE 12,'***ERROR: ENDDO IMMEDIATELY FOLLOWS DO OR IF***'     00000340
+&FIRSTC  SETB  0                  TURN OFF &FIRSTC                      00000350
+         AGO   .DECR                                                    00000360
+.EOK     B     @#EX&DOIFEX(&LVLPTR)  BRANCH BACK TO $DO                 00000370
+         EXLBL COND               GENERATE END LABEL                    00000380
+         AIF   (&EXCODE(&LVLPTR) EQ 0).DECR  CHECK INVALID MATCH        00000390
+         MNOTE 12,'***ERROR: ENDDO PAIRED WITH IF***'                   00000400
+.DECR    ANOP                                                           00000410
+&LVLPTR  SETA  &LVLPTR-1          DECREMENT STACKS INDEX                00000420
+.END     MEND                                                           00000430

@@ -1,0 +1,136 @@
+         TITLE '***PROCPATH ROUTINE***'                                 00010000
+**********                                                              01490012
+* THIS ROUTINE DETERMINES THE LOCATIONS IN THE INPUT
+* PATH VECTOR. A VECTOR IS A DIAGONAL GROUP OF THREE LOCATIONS.
+* THE STARTING LOCATION IS GIVEN AS INPUT.
+*                                                                       01520010
+*  ENTRY:  R3 =  VECTOR DIRECTION INDICATOR:
+*                     0 = UPPER RIGHT PATH
+*                     1 = UPPER LEFT
+*                     2 = LOWER LEFT
+*                     3 = LOWER RIGHT
+*          R4 =  LOCATION OF PIECE ON BOARD   (0-31)
+*                                                                       01570010
+*  EXIT:  R8 = LOCATION OF SECOND ELEMENT IN VECTOR
+*         R9 = LOCATION OF THIRD ELEMENT IN VECTOR.
+*              (99 = OFF BOARD)
+*
+PROCPATH RSAVE
+        SLA   R3,4               INDEX INTO DISPLACEMENT TABLE
+        LA    R6,DISPTABL        ADDRESS ENTRY IN DISPLACEMENT TABLE
+        AR    R3,R6
+        LA    R4,1(R4)           INCREMENT INPUT LOCATION FOR CHECKS
+         IF (CH,R4,GE,=H'1'),AND,(CH,R4,LE,=H'4'),OR, PIECE ON ODD?    X01590012
+               (CH,R4,GE,=H'9'),AND,(CH,R4,LE,=H'12'),OR,              X01600012
+               (CH,R4,GE,=H'17'),AND,(CH,R4,LE,=H'20'),OR,             X01610012
+               (CH,R4,GE,=H'25'),AND,(CH,R4,LE,=H'28')                  01620012
+           IF (CLI,0(R5),EQ,C'R'),OR,(CLI,0(R5),EQ,C'S') PIECE IS RED?
+              LH    R6,0(R3)      SET PATH LOCATION DISPLACEMENTS       01640014
+              LH    R7,2(R3)        FOR RED PIECE                       01650014
+           ELSE                                                         01660001
+              LH    R6,4(R3)      SET PATH LOCATION DISPLACEMENTS       01670014
+              LH    R7,6(R3)        FOR BLACK PIECE                     01680014
+           ENDIF                                                        01690001
+           LR    R8,R4            LOCATE THE 2ND PATH LOCATION          01700012
+           AR    R8,R6                                                  01710012
+           IF (CH,R8,GE,=H'5'),AND,(CH,R8,LE,=H'8'),OR,                X01720012
+               (CH,R8,GE,=H'13'),AND,(CH,R8,LE,=H'16'),OR,             X01730012
+               (CH,R8,GE,=H'21'),AND,(CH,R8,LE,=H'24'),OR,             X01740012
+               (CH,R8,GE,=H'29'),AND,(CH,R8,LE,=H'32')                  01750012
+             LR    R9,R4          COMPUTE 3RD PATH LOCATION             01770012
+             AR    R9,R7                                                01780012
+             IF (CH,R9,GE,=H'1'),AND,(CH,R9,LE,=H'4'),OR,              X01790012
+               (CH,R9,GE,=H'9'),AND,(CH,R9,LE,=H'12'),OR,              X01800012
+               (CH,R9,GE,=H'17'),AND,(CH,R9,LE,=H'20'),OR,             X01810012
+               (CH,R9,GE,=H'25'),AND,(CH,R9,LE,=H'28')                  01820012
+             ELSE                                                       01840005
+               LA    R9,99        SET OFF-BOARD LOCATION
+             ENDIF                                                      01870005
+           ELSE                                                         01880004
+             LA    R8,99          SET OFF-BOARD LOCATIONS
+             LA    R9,99
+           ENDIF                                                        01920004
+         ELSE                                                           01930005
+           IF (CLI,0(R5),EQ,C'R'),OR,(CLI,0(R5),EQ,C'S') PIECE IS RED?
+              LH    R6,8(R3)      SET PATH LOCATION DISPLACEMENTS       01950014
+              LH    R7,10(R3)       FOR RED PIECE                       01960014
+           ELSE                                                         01970005
+              LH    R6,12(R3)     SET PATH LOCATION DISPLACEMENTS       01980014
+              LH    R7,14(R3)       FOR BLACK PIECE                     01990014
+           ENDIF                                                        02000005
+           LR    R8,R4            LOCATE THE 2ND PATH LOCATION          02010012
+           AR    R8,R6                                                  02020012
+           IF (CH,R8,GE,=H'1'),AND,(CH,R8,LE,=H'4'),OR,                X02030012
+               (CH,R8,GE,=H'9'),AND,(CH,R8,LE,=H'12'),OR,              X02040012
+               (CH,R8,GE,=H'17'),AND,(CH,R8,LE,=H'20'),OR,             X02050012
+               (CH,R8,GE,=H'25'),AND,(CH,R8,LE,=H'28')                  02060012
+             LR    R9,R4          COMPUTE 3RD PATH LOCATION             02080012
+             AR    R9,R7                                                02090012
+             IF (CH,R9,GE,=H'5'),AND,(CH,R9,LE,=H'8'),OR,              X02100012
+               (CH,R9,GE,=H'13'),AND,(CH,R9,LE,=H'16'),OR,             X02110012
+               (CH,R9,GE,=H'21'),AND,(CH,R9,LE,=H'24'),OR,             X02120012
+               (CH,R9,GE,=H'29'),AND,(CH,R9,LE,=H'32')                  02130012
+             ELSE                                                       02150005
+               LA    R9,99        SET OFF-BOARD LOCATION
+             ENDIF                                                      02180005
+           ELSE                                                         02190005
+             LA    R8,99          SET OFF-BOARD LOCATIONS
+             LA    R9,99
+           ENDIF                                                        02230005
+         ENDIF                                                          02240006
+*
+         IF (CH,R8,NE,=H'99')   SET DISPLACEMENT VALUES
+           AH    R8,=H'-1'        DECREMENT RETURNED VALUE
+         ENDIF
+         IF (CH,R9,NE,=H'99')
+           AH    R9,=H'-1'        DECREMENT RETURNED VALUE
+         ENDIF
+         L     R13,4(R13)         ADDRESS CALLER SAVE AREA              00033000
+         LA    R1,72              FREE CURRENT SAVE AREA                00034000
+         FREESAVE                                                       00035000
+         LM    R14,R15,12(R13)    RESTORE REGS EXCEPT R8,R9
+         LM    R0,R7,20(R13)
+         LM    R10,R12,60(R13)
+         BR    R14                RETURN                                00038000
+         DROP                                                           02260010
+         LTORG                                                          02270013
+*                                                                       02280013
+* THE PATH DISPLACEMENT TABLE.                                          02290013
+DISPTABL DS    0H                                                       02300014
+* UPPER RIGHT DISPLACEMENTS.                                            02310015
+         DC    H'5'               RED, PATH2, ODD                       02320015
+         DC    H'9'               RED, PATH3, ODD                       02330015
+         DC    H'-4'              BLACK, PATH2, ODD                     02340015
+         DC    H'-9'              BLACK, PATH3, ODD                     02350015
+         DC    H'4'               RED, PATH2, EVEN                      02360015
+         DC    H'9'               RED, PATH3, EVEN                      02370015
+         DC    H'-5'              BLACK, PATH2, EVEN                    02380015
+         DC    H'-9'              BLACK, PATH3, EVEN                    02390015
+* UPPER LEFT DISPLACEMENTS.                                             02400015
+         DC    H'4'               RED, PATH2, ODD                       02410015
+         DC    H'7'               RED, PATH3, ODD                       02420015
+         DC    H'-3'              BLACK, PATH2, ODD                     02430015
+         DC    H'-7'              BLACK, PATH3, ODD                     02440015
+         DC    H'3'               RED, PATH2, EVEN                      02450015
+         DC    H'7'               RED, PATH3, EVEN                      02460015
+         DC    H'-4'              BLACK, PATH2, EVEN                    02470015
+         DC    H'-7'              BLACK, PATH3, EVEN                    02480015
+* LOWER LEFT DISPLACEMENTS.                                             02490015
+         DC    H'-4'              RED, PATH2, ODD                       02500015
+         DC    H'-9'              RED, PATH3, ODD                       02510015
+         DC    H'5'               BLACK, PATH2, ODD                     02520015
+         DC    H'9'               BLACK, PATH3, ODD                     02530015
+         DC    H'-5'              RED, PATH2, EVEN                      02540015
+         DC    H'-9'              RED, PATH3, EVEN                      02550015
+         DC    H'4'               BLACK, PATH2, EVEN                    02560015
+         DC    H'9'               BLACK, PATH3, EVEN                    02570015
+* LOWER RIGHT DISPLACEMENTS.                                            02580015
+         DC    H'-3'              RED, PATH2, ODD                       02590015
+         DC    H'-7'              RED, PATH3, ODD                       02600015
+         DC    H'4'               BLACK, PATH2, ODD                     02610015
+         DC    H'7'               BLACK, PATH3, ODD                     02620015
+         DC    H'-4'              RED, PATH2, EVEN                      02630015
+         DC    H'-7'              RED, PATH3, EVEN                      02640015
+         DC    H'3'               BLACK, PATH2, EVEN                    02650015
+         DC    H'7'               BLACK, PATH3, EVEN                    02660015
+         DROP

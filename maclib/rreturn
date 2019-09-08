@@ -1,0 +1,15 @@
+         MACRO                                                          00025000
+&LABEL   RRETURN                                                        00026000
+.***********                                                            00027000
+.*                                                                      00028000
+.* THIS MACRO GENERATES REENTRANT CODE TO RESTORE A CALLING ROUTINE'S   00029000
+.* REGISTERS, AND FREE THE SAVE AREA GOTTEN IN THE MATCHING RSAVE.      00030000
+.*                                                                      00031000
+.************                                                           00032000
+&LABEL   L     R13,4(R13)         ADDRESS CALLER SAVE AREA              00033000
+         LA    R1,72              FREE CURRENT SAVE AREA                00034000
+         FREESAVE                                                       00035000
+         LM    R14,R15,12(R13)    RESTORE REGISTERS                     00036000
+         LM    R0,R12,20(R13)                                           00037000
+         BR    R14                RETURN                                00038000
+         MEND                                                           00039000

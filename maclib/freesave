@@ -1,0 +1,20 @@
+         MACRO                                                          00070000
+&LABEL   FREESAVE                                                       00071000
+.**********                                                             00072000
+.*                                                                      00073000
+.* THIS MACRO WILL RETURN A BLOCK OF CORE TO THE MONSTER BLOCK FOR      00074000
+.* THE INVOKING PROCESS.                                                00075000
+.*                                                                      00076000
+.*     ENTRY:  R1 - ADDRESS OF BLOCK                                    00077000
+.*     EXIT:   NONE                                                     00078000
+.*                                                                      00079000
+.**********                                                             00080000
+&LABEL   L     R15,=V(CORECOMM)   ADDRESS CORECOMM                      00081000
+         USING CORECOMM,R15
+         L     R14,SBLKINDX       LOAD MONSTER BLOCK INDEX              00082000
+         SR    R14,R1
+         ST    R14,SBLKINDX       STORE  NEW INDEX
+         A     R1,SBLKLEN           AND STORE NEW LENGTH
+         ST    R1,SBLKLEN
+         DROP R15
+         MEND                                                           00088000

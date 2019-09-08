@@ -1,0 +1,83 @@
+         MACRO                                                          00000100
+         COND                                                           00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.* MACRO:      COND--ATTACH CONDITION TO AN "IF" OR "DO" MACRO.       * 00000140
+.*                                                                    * 00000150
+.* FUNCTION:   TO GENERATE AN INSTRUCTION SET WHICH WILL TEST THE     * 00000160
+.*             CONDITION SPECIFIED BY THE USER.                       * 00000170
+.*                                                                    * 00000180
+.* PARAMETERS: CODED AS A LIST OF INSTRUCTIONS AND LOGICAL OPERANDS   * 00000190
+.*             AS FOLLOWS:                                            * 00000200
+.*                                                                    * 00000210
+.*             (INSTRUCTION),LOGICAL-OPERATOR,(INSTRUCTION),ETC...    * 00000220
+.*                                                                    * 00000230
+.*             THE LOGICAL OPERATORS ARE AND, OR, ANDIF, AND ORIF.    * 00000240
+.*                                                                    * 00000250
+.*             ALSO CAN BE CODED AS "ELSE" WHICH CAN ONLY BE CODED    * 00000260
+.*             WITHIN AN "IF" MACRO AS LAST OF ALL COND'S WITHIN THE  * 00000270
+.*             "IF" AND MUST NOT BE THE ONLY COND.  IF THE USER DOES  * 00000280
+.*             NOT USE "COND  ELSE" WITHIN AN "IF" AND NONE OF THE    * 00000290
+.*             COND'S CODED ARE SATISFIED, THE ROUTINE WILL ABEND.    * 00000300
+.*                                                                    * 00000310
+.* XREF:       MACROS USED--CPARSE                                    * 00000320
+.*             MODULES CALLED--NONE                                   * 00000330
+.*                                                                    * 00000340
+.* AUTHOR:     DAVID T. CARPENTER.                                    * 00000350
+.*                                                                    * 00000360
+.* DATE:       10 OCTOBER 1976.                                       * 00000370
+.*                                                                    * 00000380
+.* SEE THE "NIU STRUCTURE MACROS"  WRITEUP FOR FURTHER DOCUMENTATION. * 00000390
+.*                                                                    * 00000400
+.********************************************************************** 00000410
+         GBLA  &LVLPTR            LEVEL OF MACRO INVOCATION             00000420
+         GBLA  &CONDEX(50)        STACK OF COND SEQUENCE LABELS         00000430
+         GBLA  &DOIFEX(50)        STACK OF UNIQUE LABELS PER LEVEL      00000440
+         GBLB  &ELSE(50)          INDICATOR OF ELSE PROCESSED AT LEVEL  00000450
+         GBLB  &EXCODE(50)        TYPE OF MACRO AT GIVEN LEVEL          00000460
+         GBLB  &ERRFLAG           INTERMACRO ERROR INDICATOR            00000470
+         GBLB  &FIRSTC            INDICATOR OF FIRST $COND PROCESSED    00000480
+&ERRFLAG SETB  0                  SET &ERRFLAG=OFF                      00000490
+         AIF   (&EXCODE(&LVLPTR) EQ 1).FORIF IF "IF"-->.FORIF           00000500
+         AIF   ('&SYSLIST(1)' NE 'ELSE').CHKERR  IF "ELSE" NOT PARM     00000510
+&ERRFLAG SETB  1                  SET &ERRFLAG=ON                       00000520
+         MNOTE 12,'*** USE OF ELSE PARM ON COND WITHIN DO ILLEGAL ***'  00000530
+         AGO   .CHKERR            GO TO CHKERR                          00000540
+.FORIF   ANOP                                                           00000550
+         AIF   (&ELSE(&LVLPTR) EQ 0).NOELSE  IF NO ELSE YET-->.NOELSE   00000560
+         MNOTE 12,'*** PREVIOUS COND ELSE MUST BE LAST OF CONDS ***'    00000570
+         AGO   .CHKERR            GO TO .CHKERR                         00000580
+.NOELSE  ANOP                                                           00000590
+         AIF   ('&SYSLIST(1)' NE 'ELSE').CHKERR IF NOT ELSE -->.CHKERR  00000600
+         AIF   (&FIRSTC EQ 1).BADELSE  IF ELSE IS FIRST $COND-->BADELS  00000610
+&ELSE(&LVLPTR) SETB  1            SET THE ELSE FLAG ON AT THAT LEVEL    00000620
+         AGO   .CHKERR            GO TO .CHKERR                         00000630
+.BADELSE ANOP                                                           00000640
+&ERRFLAG SETB  1                  SET THE &ERRFLAG=ON                   00000650
+         MNOTE 12,'*** COND ELSE AS FIRST COND IS ILLEGAL ***'          00000660
+.CHKERR  ANOP                                                           00000670
+         AIF   (&ERRFLAG EQ 1).CHKC  IF &ERRFLAG=ON, GO TO CHKC         00000680
+         AIF   (&FIRSTC EQ 1).SETC  IF THIS IS THE FIRST $COND-->.SETC  00000690
+         BC    15,@#EX&DOIFEX(&LVLPTR) BRANCH TO ENDIF OR DO            00000700
+         EXLBL COND               GENERATE BRANCH LABEL FROM LAST COND  00000710
+         AGO   .CHKELSE           GO TO .CHKELSE                        00000720
+.SETC    ANOP                                                           00000730
+&FIRSTC  SETB  0                  INDICATE FIRST $COND PROCESSED        00000740
+.CHKELSE ANOP                                                           00000750
+         AIF   (&ELSE(&LVLPTR) EQ 1).NOMORE IF PARM IS ELSE-->.NOMORE   00000760
+         AIF   (N'&SYSLIST EQ 1).ISSIMP CHECK FOR SINGLE CONDITION      00000770
+         CPARSE  &SYSLIST(1),&SYSLIST(2),&SYSLIST(3),&SYSLIST(4),&SYSLIX00000780
+               ST(5),&SYSLIST(6),&SYSLIST(7),&SYSLIST(8),&SYSLIST(9),&SX00000790
+               YSLIST(10),&SYSLIST(11),&SYSLIST(12),&SYSLIST(13),&SYSLIX00000800
+               ST(14),&SYSLIST(15),&SYSLIST(16),&SYSLIST(17),&SYSLIST(1X00000810
+               8),&SYSLIST(19),&SYSLIST(20),&SYSLIST(21),&SYSLIST(22),&X00000820
+               SYSLIST(23),&SYSLIST(24),&SYSLIST(25)                    00000830
+         AGO   .NOMORE            GO TO .NOMORE                         00000840
+.ISSIMP  ANOP                                                           00000850
+         GENCODE &SYSLIST(1),@#EX&CONDEX(&LVLPTR),NOT                   00000860
+         AGO   .NOMORE                                                  00000870
+.CHKC    ANOP                                                           00000880
+         AIF   (&FIRSTC EQ 0).NOMORE  IF &FIRSTC NOT ON-->.NOMORE       00000890
+&FIRSTC  SETB  0                  ELSE SET IT OFF                       00000900
+.NOMORE  ANOP                                                           00000910
+         MEND                                                           00000920

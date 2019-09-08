@@ -1,0 +1,74 @@
+         MACRO                                                          00000100
+         GETCC &COND                                                    00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.* MACRO:      GETCC--RETURN PROPER CC VALUE TO CALLING MACRO.        * 00000140
+.*                                                                    * 00000150
+.* FUNCTION:   TO VERIFY AND TRANSLATE IF NECESSARY THE SPECIFIED     * 00000160
+.*             USER CONDITION.                                        * 00000170
+.*                                                                    * 00000180
+.* PARAMETERS:                                                        * 00000190
+.*                                                                    * 00000200
+.*         &COND   THE SYMBOL SPECIFYING THE USER CONDITION THAT IS   * 00000210
+.*                 TO BE VERIFIED AND TRANSLATED.                     * 00000220
+.*                                                                    * 00000230
+.* XREF:       MACROS USED--NONE                                      * 00000240
+.*             MODULES CALLED--NONE                                   * 00000250
+.*                                                                    * 00000260
+.* AUTHOR:     DAVID T. CARPENTER.                                    * 00000270
+.*                                                                    * 00000280
+.* DATE:       10 OCTOBER 1976.                                       * 00000290
+.*                                                                    * 00000300
+.* SEE THE "NIU STRUCTURE MACROS"  WRITEUP FOR FURTHER DOCUMENTATION. * 00000310
+.*                                                                    * 00000320
+.********************************************************************** 00000330
+         GBLA  &CCVAL                                                   00000340
+         GBLB  &LBLFLAG           FLAG INDICATES USER MNEMONIC          00000350
+         LCLC  &LWK1                                                    00000360
+         AIF   ('&COND'(1,1) LT '0' OR '&COND'(1,1) GT '9').NOTNUM      00000370
+         AIF   (K'&COND GT 2).NUMERR                                    00000380
+         AIF   (K'&COND EQ 1).NUMOK                                     00000390
+         AIF   ('&COND'(1,2) GE '10' AND '&COND'(1,2) LE '15').NUMOK    00000400
+.NUMERR  ANOP                                                           00000410
+         MNOTE 12,'*** INVALID NUMERIC CONDITION ***'                   00000420
+         MEXIT                                                          00000430
+.NUMOK   ANOP                                                           00000440
+&CCVAL     SETA  &COND                                                  00000450
+           MEXIT                                                        00000460
+.NOTNUM  AIF   (K'&COND NE 1).TWOCHAR                                   00000470
+&LWK1      SETC  '&COND'                                                00000480
+           AGO   .CALCC                                                 00000490
+.TWOCHAR AIF   (K'&COND NE 2).INVCOND                                   00000500
+           AIF   ('&COND'(1,1) NE 'N').OTHERMN                          00000510
+&LWK1        SETC  '&COND'(2,1)                                         00000520
+           AGO   .CALCC                                                 00000530
+.OTHERMN   AIF   ('&COND' EQ 'EQ').BC8                                  00000540
+           AIF   ('&COND' EQ 'LT').BC4                                  00000550
+           AIF   ('&COND' NE 'LE').TRYGT                                00000560
+&CCVAL       SETA 13                                                    00000570
+           MEXIT                                                        00000580
+.TRYGT     AIF   ('&COND' EQ 'GT').BC2                                  00000590
+           AIF   ('&COND' NE 'GE').INVCOND                              00000600
+&CCVAL       SETA  11                                                   00000610
+           MEXIT                                                        00000620
+.CALCC   AIF   ('&LWK1' NE 'O').TRYH                                    00000630
+&CCVAL     SETA 1                                                       00000640
+         AGO   .TSTN                                                    00000650
+.TRYH    AIF   ('&LWK1' EQ 'P' OR '&LWK1' EQ 'H').BC2                   00000660
+           AIF ('&LWK1' EQ 'L' OR '&LWK1' EQ 'M').BC4                   00000670
+             AIF ('&LWK1' EQ 'E' OR '&LWK1' EQ 'Z').BC8                 00000680
+               AGO   .INVCOND                                           00000690
+.BC8         ANOP                                                       00000700
+&CCVAL       SETA 8                                                     00000710
+             AGO   .TSTN                                                00000720
+.BC4       ANOP                                                         00000730
+&CCVAL     SETA 4                                                       00000740
+           AGO   .TSTN                                                  00000750
+.BC2     ANOP                                                           00000760
+&CCVAL   SETA 2                                                         00000770
+.TSTN    AIF  ('&COND'(1,1) NE 'N').DONE                                00000780
+&CCVAL       SETA  15-&CCVAL                                            00000790
+.DONE    MEXIT                                                          00000800
+.INVCOND ANOP                                                           00000810
+&LBLFLAG SETB  1                  INDICATE USER MNEMONOC                00000820
+         MEND                                                           00000830

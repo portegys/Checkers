@@ -1,0 +1,168 @@
+         MACRO                                                          00000100
+         CPARSE                                                         00000110
+.* ******************************************************************** 00000120
+.*                                                                      00000130
+.*   MACRO:     'CPARSE'                                                00000140
+.*                                                                      00000150
+.*   FUNCTION:  TO GENERATE TESTING AND BRANCHING CODE IMPLEMENTING     00000160
+.*              THE 'COND' MACRO.                                       00000170
+.*                                                                      00000180
+.*   OPERANDS:  BEGINNING AND ENDING WITH SIMPLE CONDITIONS, THE        00000190
+.*              OPERAND LIST CONSISTS OF SIMPLE CONDITIONS AND          00000200
+.*              LOGICAL OPERATORS APPEARING IN TURNS.                   00000210
+.*              FOR FULL INFORMATION ABOUT SIMPLE CONDITIONS AND        00000220
+.*              LOGICAL OPERATIONS, CONSULT 'CODING OF CONDITIONS'      00000230
+.*              IN USER'S MANUAL.                                       00000240
+.*                                                                      00000250
+.*   XREF:      MACROS USED - 'GENCODE'                                 00000260
+.*                                                                      00000270
+.*   AUTHOR:    NAIPING LEE.                                            00000280
+.*                                                                      00000290
+.*   DATE:      24 OCT 1976                                             00000300
+.*                                                                      00000310
+.* ******************************************************************** 00000320
+         GBLB  &ERRFLAG           FLAG WHEN ON, INDICATES ERROR OCCURED 00000330
+         GBLA  &LVLPTR            PTR TO CURRENT LEVEL                  00000340
+         GBLA  &CONDEX(50)        STACK CONTAINING LABEL SUFFIX OFNEXT -00000350
+                                  COND SEGMENT                          00000360
+         GBLA  &N1                SUFFIX # TO DISTINGUISH 'LO' LABEL    00000370
+         GBLA  &N2                SUFFIX # TO DISTINGUISH 'NH' LABEL    00000380
+         GBLA  &N3                SUFFIX # TO DISTINGUISH 'HO' LABEL    00000390
+         GBLA  &N4                SUFFIX # TO DISTINGUISH 'CD' LABEL    00000400
+         LCLB  &LOFLAG            FLAG, WHEN ON, INDICATES PREVIOUS    -00000410
+                                  LOGICAL OPR IS 'AND'                  00000420
+         LCLB  &NHFLAG            FLAG, WHEN ON, INDICATES OR IN       -00000430
+                                  CURRENT LOW LEVEL                     00000440
+         LCLB  &HOFLAG            FLAG, WHEN ON, LAST HIGH LEVEL IS    -00000450
+                                  'ENDIF'                               00000460
+         LCLB  &ENDFLAG           FLAG, WHEN ON, INDICATES END OF PARMS 00000470
+         LCLA  &CNTR              POINTER TO CPARSE PARM BEING PROCESSD 00000480
+         LCLA  &LOSTPTR           STACK PTR OF &LOSTACK                 00000490
+         LCLA  &LOSTACK(6)        STACK OF LO LABELS EQU NEXT HO        00000500
+         LCLA  &NHSTPTR           STACK PTR OF &NHSTACK                 00000510
+         LCLA  &NHSTACK(6)        STACK OF NH LABELS EQU NEXT CD        00000520
+.*                                                                      00000530
+&CNTR    SETA  1                  POINT CNTR TO 1ST PARAMETER           00000540
+.*                                                                      00000550
+.QUITEST AIF   (&ERRFLAG).CPREXIT   IF ERRFLAG OR                       00000560
+         AIF   (NOT &ENDFLAG).CHKCNTR   ENDFLAG IS ON                   00000570
+.CPREXIT MEXIT                          THEN MEXIT                      00000580
+.*                                                                      00000590
+.CHKCNTR AIF   ('&SYSLIST(&CNTR)' EQ '').EVEN#P BRANCH ON EVEN# PARMS   00000600
+         AIF   ('&SYSLIST(&CNTR+1)' EQ '').NULL BRANCH TO PROPERLY PROC 00000610
+         AIF   ('&SYSLIST(&CNTR+1)' EQ 'AND').AND    PARMS ACCORDING TO 00000620
+         AIF   ('&SYSLIST(&CNTR+1)' EQ 'OR').OR      TYPE OF CURRENT    00000630
+         AIF   ('&SYSLIST(&CNTR+1)' EQ 'ANDIF').ANDIF   LOGICAL OPR     00000640
+         AIF   ('&SYSLIST(&CNTR+1)' EQ 'ORIF').ORIF                     00000650
+         AGO   .OTHER                                                   00000660
+.*                                                                      00000670
+.AND     GENCODE &SYSLIST(&CNTR),@#LO&N1,NOT  GENERATE TESTING CODE     00000680
+         AIF   (&ERRFLAG).INCNTR               SKIP ON ANY ERROR        00000690
+&LOFLAG  SETB  1                  INDICATE PREVIOUS LOGICAL OPR IS 'AND 00000700
+         AGO   .INCNTR            GO TO STEP 10                         00000710
+.*                                                                      00000720
+.OR      GENCODE &SYSLIST(&CNTR),@#NH&N2  GENERATE TESTING CODE         00000730
+         AIF   (&ERRFLAG).INCNTR           SKIP ON ANY ERROR            00000740
+.*                                                                      00000750
+         AIF   (NOT &LOFLAG).SETF2  BRANCH IF NO LO LABEL TO BE GENED   00000760
+@#LO&N1  EQU   *                                                        00000770
+&N1      SETA  &N1+1              UPDATE LO SUFFEX # N1                 00000780
+&LOFLAG  SETB  0                  TURN OFF LOFLAG                       00000790
+.*                                                                      00000800
+.SETF2   ANOP                                                           00000810
+&NHFLAG  SETB  1                  TURN ON NHFLAG                        00000820
+         AGO   .INCNTR            GO TO STEP 10                         00000830
+.*                                                                      00000840
+.ANDIF   GENCODE &SYSLIST(&CNTR),@#HO&N3,NOT  GENERATE TESTING CODE     00000850
+         AIF   (&ERRFLAG).INCNTR               SKIP ON ANY ERROR        00000860
+.*                                                                      00000870
+         AIF   (NOT &LOFLAG).AF2TEST  BRANCH IF NO LO LABEL TO BE GENED 00000880
+&LOSTPTR SETA  &LOSTPTR+1         INCREMENT LO STACK PTR BY 1           00000890
+&LOSTACK(&LOSTPTR)  SETA  &N1     STACK LO LABEL SUFFIX # TO BE GENED   00000900
+&N1      SETA  &N1+1              UPDATE LO SUFFEX # N1                 00000910
+&LOFLAG  SETB  0                  TURN OFF LOFLAG                       00000920
+.*                                                                      00000930
+.AF2TEST AIF   (NOT &NHFLAG).SETF3  BRANCH IF NO NH LABEL TO BE GENED   00000940
+@#NH&N2  EQU   *                                                        00000950
+&N2      SETA  &N2+1              UPDATE NH SUFFIX # N2                 00000960
+&NHFLAG  SETB  0                  TURN OFF NHFLAG                       00000970
+.*                                                                      00000980
+.SETF3   ANOP                                                           00000990
+&HOFLAG  SETB  1                  TURN ON HOFALG                        00001000
+         AGO   .INCNTR            GO TO STEP 10                         00001010
+.*                                                                      00001020
+.ORIF    GENCODE &SYSLIST(&CNTR),@#CD&N4  GENERATE TESTING CODE         00001030
+         AIF   (&ERRFLAG).INCNTR   SKIP ON ANY ERROR                    00001040
+.*                                                                      00001050
+         AIF   (NOT &LOFLAG).OF2TEST  BRANCH IF NO LO LABEL TO BE GENED 00001060
+@#LO&N1  EQU   *                                                        00001070
+&N1      SETA  &N1+1              UPDATE LO SUFFEX # N1                 00001080
+&LOFLAG  SETB  0                  TURN OFF LOFLAG                       00001090
+.*                                                                      00001100
+.OF2TEST AIF   (NOT &NHFLAG).OF3TEST  BRANCH IF NO NH LABEL TO BE GENED 00001110
+&NHSTPTR SETA  &NHSTPTR+1         INCREMENT NH STACK PTR BY 1           00001120
+&NHSTACK(&NHSTPTR)  SETA  &N2     STACK NH LABEL SUFFIX # TO BE GENED   00001130
+&N2      SETA  &N2+1              UPDATE NH SUFFIX # N2                 00001140
+&NHFLAG  SETB  0                  TURN OFF NHFLAG                       00001150
+.*                                                                      00001160
+.OF3TEST AIF   (NOT &HOFLAG).INCNTR  BRANCH IF NO HO LABEL TO GENED     00001170
+.OFLOLP  AIF   (&LOSTPTR EQ 0).OFGENHO BRANCH ON END OF STACKED LOLABEL 00001180
+@#LO&LOSTACK(&LOSTPTR)   EQU   *                                        00001190
+&LOSTPTR SETA  &LOSTPTR-1            DECREMENT STACK POINTER BY 1       00001200
+         AGO   .OFLOLP               LOOP BACK TO TEST                  00001210
+.OFGENHO ANOP                                                           00001220
+@#HO&N3  EQU   *                                                        00001230
+&N3      SETA  &N3+1              UPDATE HO LABEL SUFFIX # N3           00001240
+&HOFLAG  SETB  0                  TURN OFF HOFLAG                       00001250
+         AGO   .INCNTR            GO TO STEP 10                         00001260
+.*                                                                      00001270
+.NULL    GENCODE &SYSLIST(&CNTR),@#EX&CONDEX(&LVLPTR),NOT               00001280
+         AIF   (&ERRFLAG).INCNTR   SKIP ON ANY ERROR                    00001290
+.*                                                                      00001300
+         AIF   (NOT &LOFLAG).NF2TEST  BRANCH IF NO LO LABEL TO BE GENED 00001310
+&LOSTPTR SETA  &LOSTPTR+1         INCREMENT LO STACK PTR BY 1           00001320
+&LOSTACK(&LOSTPTR)  SETA  &N1     STACK LO LABEL SUFFIX # TO BE GENED   00001330
+&N1      SETA  &N1+1              UPDATE LO SUFFEX # N1                 00001340
+&LOFLAG  SETB  0                  TURN OFF LOFLAG                       00001350
+&HOFLAG  SETB  1                  TRUN ON HOFLAG                        00001360
+.*                                                                      00001370
+.NF2TEST AIF   (NOT &NHFLAG).NF3TEST  BRANCH ON NO NH LABEL TO BE GENED 00001380
+&NHSTPTR SETA  &NHSTPTR+1         INCREMENT NH STACK PTR BY 1           00001390
+&NHSTACK(&NHSTPTR)  SETA  &N2     STACK NH LABEL SUFFIX # TO BE GENED   00001400
+&N2      SETA  &N2+1              UPDATE NH SUFFIX # N2                 00001410
+&NHFLAG  SETB  0                  TURN OFF NHFLAG                       00001420
+.*                                                                      00001430
+.NF3TEST AIF   (NOT &HOFLAG).NHLOOP                                     00001440
+         B     *+8                                                      00001450
+.NLOLOOP AIF   (&LOSTPTR EQ 0).NGENHO BRANCH ON END OF STACKED LO LABEL 00001460
+@#LO&LOSTACK(&LOSTPTR)   EQU   *                                        00001470
+&LOSTPTR SETA  &LOSTPTR-1            DECREMENT STACK POINTER BY 1       00001480
+         AGO   .NLOLOOP              LOOP BACK TO TEST                  00001490
+.NGENHO  ANOP                                                           00001500
+@#HO&N3  B     @#EX&CONDEX(&LVLPTR)                                     00001510
+&N3      SETA  &N3+1              UPDATE HO LABEL SUFFIX # N3           00001520
+&HOFLAG  SETB  0                  TURN OFF HOFLAG                       00001530
+.*                                                                      00001540
+.NHLOOP  AIF   (&NHSTPTR EQ 0).GENCD BRANCH ON END OF STACKED NH LABELS 00001550
+@#NH&NHSTACK(&NHSTPTR)   EQU   *                                        00001560
+&NHSTPTR SETA  &NHSTPTR-1            DECREMENT STACK POINTER BY 1       00001570
+         AGO   .NHLOOP            LOOP BACK TO TEST                     00001580
+.GENCD   ANOP                                                           00001590
+@#CD&N4  EQU   *                                                        00001600
+&N4      SETA  &N4+1              UPDATE CD LABEL SUFFIX # N4           00001610
+&ENDFLAG SETB  1                  INDICATE END OF PROCESSING            00001620
+         AGO   .INCNTR            GO TO STEP 10                         00001630
+.*                                                                      00001640
+.OTHER   MNOTE 12,'*** ERROR: INVALID LOGICAL OPERATER OCCURED AFTER PA-00001650
+               RM &CNTR ***'                                            00001660
+&ERRFLAG SETB  1                  SET ON ERROR FLAG                     00001670
+         AGO   .INCNTR            GO TO STEP 10                         00001680
+.*                                                                      00001690
+.EVEN#P  MNOTE 12,'*** ERROR: UNBALANCED (EVEN) NUMBER OF PARAMETERS **-00001700
+               *'                                                       00001710
+&ERRFLAG SETB  1                  SET ON ERROR FLAG                     00001720
+.*                                                                      00001730
+.INCNTR  ANOP                                                           00001740
+&CNTR    SETA  &CNTR+2            UPDATE PTR TO CURRENT PARMS           00001750
+         AGO   .QUITEST           GO TO STEP 2                          00001760
+       MEND                                                             00001770

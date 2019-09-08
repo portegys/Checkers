@@ -1,0 +1,13 @@
+         MACRO                                                          00010000
+&LABEL   XRETURN                                                        00020000
+.***********                                                            00030000
+.*                                                                      00040000
+.* THIS MACRO GENERATES CODE TO RESTORE A CALLING ROUTINE'S             00050000
+.* REGISTERS.                                                           00060000
+.*                                                                      00070000
+.************                                                           00080000
+&LABEL   L     R13,4(R13)         ADDRESS CALLER SAVE AREA              00090000
+         LM    R14,R15,12(R13)    RESTORE REGISTERS                     00100000
+         LM    R0,R12,20(R13)                                           00110000
+         BR    R14                RETURN                                00120000
+         MEND                                                           00130000

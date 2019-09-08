@@ -1,0 +1,22 @@
+         MACRO                                                          00010000
+&LABEL   RSAVE                                                          00020000
+.**********                                                             00030000
+.*                                                                      00040000
+.* THIS MACRO GENERATES REENTRANT CODE TO ESTABLISH A UNIQUE            00050000
+.* SAVE AREA FOR CALLS TO SUBORDINATE AND/OR RELATED RECURSIVE          00060000
+.* ROUTINES.                                                            00070000
+.*                                                                      00080000
+.**********                                                             00090000
+&LABEL   CSECT                                                          00100000
+         STM   R14,R15,12(R13)    SAVE THE REGISTERS                    00110000
+         STM   R0,R12,20(R13)          "                                00120000
+         LR    R12,R15            SET UP R12 AS PERMANENT               00130000
+         USING &LABEL,R12           BASE REGISTER                       00140000
+         LA    R1,72              LOAD SAVE AREA LENGTH                 00160000
+         GETSAVE                                                        00161000
+         ST    R1,8(R13)          STORE FORWARD POINTER                 00170000
+         ST    R13,4(R1)          STORE BACKWARD POINTER                00180000
+         LR    R13,R1             ADDRESS NEW SAVE AREA                 00190000
+         L     R1,4(R13)          LOAD PARM ADDRESS                     00200000
+         L     R1,24(R1)
+         MEND                                                           00210000

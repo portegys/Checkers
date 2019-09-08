@@ -1,2 +1,2 @@
 # Checkers
-Checkers game
+Checkers game in IBM assembler

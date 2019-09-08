@@ -1,0 +1,68 @@
+         TITLE '***GENPARM DSECT***'                                    00001000
+* THIS DSECT DESCRIBES THE GENERAL PARAMETER FORMAT FOR THE             00002000
+* THREE NUCLEUS ROUTINES:  BOARD, PIECE, AND EVALUATE.
+*                                                                       00004000
+GENPARM  DSECT                                                          00005000
+BOARDIN  DS    32C                THE INPUT BOARD:
+*                                   ' ' = UNOCCUPIED
+*                                   'B' = BLACK PAWN                    00008000
+*                                   'A' = BLACK KING                    00009000
+*                                   'R' = RED PAWN                      00010000
+*                                   'S' = RED KING                      00011000
+BOARDOUT DS    32C                THE OUTPUT BOARD
+BORDVALU DS    F                  VALUE OF BEST MOVE
+LEVELOOK DS    F                  # LEVELS TO LOOK AHEAD                00017000
+PIECOLOR DS    C                  PROGRAM'S PIECE COLOR:
+*                                   'R' = RED                           00019000
+*                                   'B' = BLACK                         00020000
+MOVTYPE  DS    C                  MOVE TYPE:                            00021000
+*                                   'A' = PROGRAM'S MOVE                00022000
+*                                   'B' = OPPONENT'S MOVE               00023000
+MOVMADE  DS    X                  MOVE INDICATOR:
+*                                    0 = MOVE NOT MADE
+*                                    1 = MOVE MADE
+ENDGAME DS     X                  END GAME INDICATOR:
+*                                  0 - NOT END OF GAME                  00030000
+*                                  1 - PROGRAM WINS
+*                                  2 - PLAYER WINS
+MOVPIEC  DS    F                  LOCATION OF PIECE TO BE EVALUATED     00038000
+JUMPFLG  DS    X                  JUMP-ONLY FLAG:                       00039000
+*                                  0 - NOT JUMP-ONLY                    00040000
+*                                  1 - JUMP-ONLY                        00041000
+         TITLE '***PIECE VALUE COMMON AREA***'
+*                                                                       00099000
+* THIS CSECT CONTAINS THE RELATIVE VALUES FOR THE VARIOUS PIECE TYPES.
+VALCOMM  CSECT                                                          00102000
+VALBPAWN DC    F'1'               VALUE OF BLACK PAWN                   00103000
+VALBKING DC    F'3'               VALUE OF BLACK KING                   00104000
+VALRPAWN DC    F'1'               VALUE OF RED PAWN                     00106000
+VALRKING DC    F'3'               VALUE OF RED KING                     00107000
+VALIWIN  DC    F'1000000'         VALUE OF WINNING BOARD FOR PROGRAM
+VALYWIN  DC    F'-1000000'        VALUE OF WINNING BOARD FOR PLAYER
+VALSCALE DC    F'1000'            SCALE FACTOR FOR STRENGTH RATIO
+         TITLE '***CORECOMM AREA ***'
+CORECOMM CSECT                                                          00112000
+BLCKADDR DS    A                  ADDRESS OF BEGINNING OF BLOCK         00113000
+BLCKINDX DS    A                  INDEX TO AVAILABLE CORE               00114000
+BLCKLEN  DS    F                  LENGTH OF AVAILABLE CORE              00115000
+SBLKADDR DS    A                  ADDRESS OF BEGINNING OF BLOCK         00113000
+SBLKINDX DS    A                  INDEX TO AVAILABLE CORE               00114000
+SBLKLEN  DS    F                  LENGTH OF AVAILABLE CORE              00115000
+         TITLE '***EQUATES***'                                          00116000
+R0       EQU   0                                                        00117000
+R1       EQU   1                                                        00118000
+R2       EQU   2                                                        00119000
+R3       EQU   3                                                        00120000
+R4       EQU   4                                                        00121000
+R5       EQU   5                                                        00122000
+R6       EQU   6                                                        00123000
+R7       EQU   7                                                        00124000
+R8       EQU   8                                                        00125000
+R9       EQU   9                                                        00126000
+R10      EQU   10                                                       00127000
+R11      EQU   11                                                       00128000
+R12      EQU   12                                                       00129000
+R13      EQU   13                                                       00130000
+R14      EQU   14                                                       00131000
+R15      EQU   15                                                       00132000
+         PRINT NOGEN

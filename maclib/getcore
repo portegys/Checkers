@@ -1,0 +1,29 @@
+         MACRO                                                          00010000
+&LABEL   GETCORE                                                        00020000
+.**********                                                             00030000
+.*                                                                      00040000
+.* THIS MACRO WILL OBTAIN A SPECIFIED BLOCK OF CORE FOR THE REQUESTING  00050000
+.* PROCESS FROM A PRE-ALLOCATED MONSTER BLOCK WHOSE INDXESS AND LENGTH  00060000
+.* ARE KEPT IN THE CORECOMM CSECT.                                      00070000
+.*                                                                      00080000
+.*     ENTRY:  R1 - LENGTH OF CORE IN BYTES                             00090000
+.*     EXIT:   R1 - INDXESS OF BLOCK                                    00100000
+.*                                                                      00110000
+.*       NOTE:  IF THE MONSTER BLOCK IS INSUFFICIENT TO SUPPORT THE     00120000
+.*              REQUEST, AN ABEND 20 IS EXECUTED.                       00130000
+.*                                                                      00140000
+.**********                                                             00150000
+&LABEL   L     R15,=V(CORECOMM)   INDXESS CORE COMMON AREA              00160000
+         USING CORECOMM,R15
+         L     R14,BLCKLEN        LOAD CORE LENGTH                      00170000
+         SR    R14,R1             SUBTRACT REQUESTED LENGTH             00180000
+         IF  (LTR,R14,R14,M)      NOT ENOUGH CORE?                      00190000
+            ABEND 20              YES -> ABEND                          00210000
+         ENDIF                                                          00220000
+         ST    R14,BLCKLEN        ELSE STORE NEW LENGTH                 00230000
+         L     R14,BLCKINDX       LOAD CORE INDEX INDXESS               00240000
+         AR    R14,R1             COMPUTE NEW INDEX                     00250000
+         L     R1,BLCKINDX        LOAD GIVEN BLOCK INDXESS              00260000
+         ST    R14,BLCKINDX       STORE NEW INDEX                       00270000
+         DROP R15
+         MEND                                                           00280000

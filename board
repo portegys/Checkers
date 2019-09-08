@@ -1,0 +1,189 @@
+         TITLE '***BOARD ROUTINE***'
+**********                                                              00134000
+*                                                                       00135000
+* THIS ROUTINE PERFORMS THE TOP-LEVEL EVALUATION OF A GIVEN BOARD TO    00136000
+* DETERMINE THE OPTIMAL MOVE.  ENTRY/EXIT CONDITIONS ARE OUTLINED IN    00137000
+* THE GENPARM DSECT.                                                    00138000
+*                                                                       00139000
+**********                                                              00140000
+BOARD RSAVE
+         LR    R10,R1
+         USING GENPARM,R10        ADDRESS GENPARM                       00143000
+         USING VALCOMM,R8
+*                                                                       00171000
+*  OBTAIN A PARM BLOCK FOR PIECE CALL, AND COPY PARMS FOR PIECE.
+         LA    R1,85            OBTAIN PARM BLOCK FOR PIECE
+         GETCORE
+         LR    R7,R1             SAVE BLOCK ADDRESS
+         LR    R11,R10           SAVE BASE PARM ADDRESS
+         MVI   JUMPFLG,X'00'      INIT JUMP FLAG
+         MVC   0(85,R1),0(R10)  COPY PARMS
+*
+* PERFORM A PRELIMINARY CHECK FOR A JUMP MOVE.
+        SR    R4,R4              INIT PIECE COUNTER
+        DO WHILE,(CH,R4,LT,=H'32'),AND,(CLI,JUMPFLG,EQ,X'00')  LOOP
+        LA    R5,BOARDIN         ADDRESS INPUT BOARD
+        AR    R5,R4              ADDRESS MOVED PIECE
+        SR    R0,R0              SET NO MATCH FLAG
+           IF  (CLI,0(R5),EQ,C'R'),OR,(CLI,0(R5),EQ,C'S'),ANDIF,       X00190000
+               (CLI,PIECOLOR,EQ,C'R'),ANDIF,(CLI,MOVTYPE,EQ,C'A')
+              LA    R0,1         SET MATCH FLAG
+           ELSE
+            IF (CLI,0(R5),EQ,C'R'),OR,(CLI,0(R5),EQ,C'S'),ANDIF,       X00192000
+               (CLI,PIECOLOR,EQ,C'B'),ANDIF,(CLI,MOVTYPE,EQ,C'B')
+              LA    R0,1         SET MATCH FLAG
+            ELSE
+            IF (CLI,0(R5),EQ,C'B'),OR,(CLI,0(R5),EQ,C'A'),ANDIF,       X00194000
+               (CLI,PIECOLOR,EQ,C'B'),ANDIF,(CLI,MOVTYPE,EQ,C'A')
+              LA    R0,1         SET MATCH FLAG
+            ELSE
+            IF (CLI,0(R5),EQ,C'B'),OR,(CLI,0(R5),EQ,C'A'),ANDIF,       X00196000
+               (CLI,PIECOLOR,EQ,C'R'),ANDIF,(CLI,MOVTYPE,EQ,C'B')       00197000
+              LA    R0,1         SET MATCH FLAG
+            ENDIF
+            ENDIF
+            ENDIF
+            ENDIF
+         IF (CH,R0,EQ,=H'1')     MATCH ON CURRENT LOCATION?
+          SR    R3,R3              INIT VECTOR COUNT
+          DO WHILE=(CH,R3,LT,=H'4')  LOOP FOR EACH VECTOR
+            IF (CH,R3,GT,=H'1'),AND,(CLI,0(R5),NE,C'S'),AND,           X
+               (CLI,0(R5),NE,C'A')
+              LA    R3,4         IF NOT KING, DON'T LOOK AT KING MOVES
+            ELSE
+              L     R15,=V(PROCPATH)
+              BALR  R14,R15      CHECK THIS VECTOR
+              IF (CH,R9,NE,=H'99'),AND,(CLI,0(R5),NE,C' ')  OK TO CHK?
+              IF (CLI,0(R5),EQ,C'A'),OR,(CLI,0(R5),EQ,C'B')  PIECE RED?
+              LA    R6,BOARDIN    ADDRESS VECTOR 2
+              AR    R6,R8
+              IF (CLI,0(R6),EQ,C'R'),OR,(CLI,0(R6),EQ,C'S')
+                LA    R6,BOARDIN   ADDRESS VECTOR 3
+                AR    R6,R9
+                  IF (CLI,0(R6),EQ,C' ')  JUMP SITUATION?
+                    MVI   JUMPFLG,X'01'    INDICATE IT
+                    LA    R3,4             GET OUT OF LOOP
+                  ENDIF
+              ENDIF
+              ELSE
+                LA    R6,BOARDIN   ADDRESS VECTOR 2
+                AR    R6,R8
+              IF (CLI,0(R6),EQ,C'A'),OR,(CLI,0(R6),EQ,C'B')
+                  LA    R6,BOARDIN  ADDRESS VECTOR 3
+                  AR    R6,R9
+                  IF (CLI,0(R6),EQ,C' ')  JUMP OF RED?
+                    MVI   JUMPFLG,X'01'   INDICATE IT
+                    LA    R3,4            GET OUT OF LOOP
+                  ENDIF
+              ENDIF
+              ENDIF
+              ENDIF
+            ENDIF
+              LA    R3,1(R3)     INDEX NEXT VECTOR
+          ENDDO
+           ENDIF
+           LA    R4,1(R4)        INCREMENT PIECE COUNTER
+        ENDDO
+*
+* INDICATE TO PIECE IF JUMP ONLY CONDITION EXISTS.
+         LA    R9,JUMPFLG        ADDRESS JUMP FLAG
+         LR    R10,R7            ADDRESS SUB PARMS
+         MVC   JUMPFLG(1),0(R9)  COPY JUMP FLAG
+         LR    R10,R11            RESTORE BASE PARM ADDRESS
+         LA    R5,BOARDIN        ADDRESS BOARD
+         SR    R6,R6             SET LOOP COUNTER
+*                                                                       00188000
+*  EVALUATE THE POSITION OF EVERY PIECE FOR THE PIECE COLOR
+         DO WHILE=(CH,R6,LT,=H'32')  CHECK EVERY PIECE ON BOARD
+           SR    R0,R0           SET MATCH FLAG TO NO
+           IF  (CLI,0(R5),EQ,C'R'),OR,(CLI,0(R5),EQ,C'S'),ANDIF,       X00190000
+               (CLI,PIECOLOR,EQ,C'R'),ANDIF,(CLI,MOVTYPE,EQ,C'A')
+               LA    R0,1           SET MATCH FLAG
+           ELSE
+            IF (CLI,0(R5),EQ,C'R'),OR,(CLI,0(R5),EQ,C'S'),ANDIF,       X00192000
+               (CLI,PIECOLOR,EQ,C'B'),ANDIF,(CLI,MOVTYPE,EQ,C'B')
+              LA    R0,1         SET MATCH FLAG
+            ELSE
+            IF (CLI,0(R5),EQ,C'B'),OR,(CLI,0(R5),EQ,C'A'),ANDIF,       X00194000
+               (CLI,PIECOLOR,EQ,C'B'),ANDIF,(CLI,MOVTYPE,EQ,C'A')
+              LA    R0,1         SET MATCH FLAG
+           ELSE
+            IF (CLI,0(R5),EQ,C'B'),OR,(CLI,0(R5),EQ,C'A'),ANDIF,       X00196000
+               (CLI,PIECOLOR,EQ,C'R'),ANDIF,(CLI,MOVTYPE,EQ,C'B')       00197000
+              LA    R0,1         SET MATCH FLAG
+            ENDIF
+            ENDIF
+            ENDIF
+            ENDIF
+            IF (CH,R0,EQ,=H'1')  PIECE MATCH FOUND?
+                LR    R10,R7      ADDRESS PIECE PARM BLOCK
+                SR    R15,R15     CLEAR FIELDS                          00201000
+                ST    R15,BORDVALU
+                ST    R6,MOVPIEC     STORE PIECE LOCATION               00204000
+                MVI   MOVMADE,X'00'  INDICATE MOVE NOT MADE
+                LR    R1,R10       ADDRESS PARMS FOR PIECE
+                L     R15,=V(PIECE)  CALL PIECE                         00206000
+                BALR  R14,R15                                           00207000
+                IF (CLI,MOVMADE,EQ,X'01') IF MOVE MADE, CHECK VALUE
+                  L    R4,BORDVALU        GET RETURNED BOARD VALUE
+                  LA   R8,BOARDOUT        ADDRESS RETURNED BOARD
+                  LR   R10,R11            ADDRESS THIS LEVEL PARMS
+                  IF (CLI,MOVMADE,EQ,X'00')   IF MOVE NOT MADE
+                    ST    R4,BORDVALU   THEN SAVE BOARD VALUE
+                    MVC   BOARDOUT(32),0(R8)  SAVE THE BOARD
+                    MVI   MOVMADE,X'01'  INDICATE MOVE MADE
+                    BAL   R9,BPRUNECK       CHECK FOR CUTTOFF
+                  ELSE
+                    IF (CLI,MOVTYPE,EQ,C'A'),AND,(C,R4,GT,BORDVALU)
+                      ST    R4,BORDVALU    SAVE BORDVALU
+                      MVC   BOARDOUT(32),0(R8)  SAVE BOARD
+                      BAL   R9,BPRUNECK       CHECK FOR CUTTOFF
+                    ELSE
+                      IF (CLI,MOVTYPE,EQ,C'B'),AND,(C,R4,LT,BORDVALU)
+                        ST    R4,BORDVALU    SAVE BOARD VALUE
+                        MVC   BOARDOUT(32),0(R8)  SAVE BOARD
+                        BAL   R9,BPRUNECK       CHECK FOR CUTTOFF
+                      ENDIF
+                    ENDIF
+                  ENDIF
+                ENDIF
+           ENDIF                                                        00219000
+             LA    R6,1(R6)             INCREMENT COUNTER               00220000
+             LA    R5,1(R5)             ADDRESS NEXT BOARD LOCATION     00221000
+         ENDDO                                                          00222000
+*                                                                       00257000
+*  SET GAME END INDICATOR IF NECESSARY.
+        LR    R10,R11            ADDRESS BASE PARMS
+        L     R8,=V(VALCOMM)     ADDRESS VALCOMM VALUES
+        MVI   ENDGAME,X'00'      SET ENDGAME INDICATOR OFF
+        IF (CLI,MOVMADE,EQ,X'00')  NO MOVE POSSIBLE?
+          MVC   BOARDOUT(32),BOARDIN   MOVE STALEMATE BOARD
+          MVI   MOVMADE,X'01'    INDICATE MOVE MADE
+          IF (CLI,MOVTYPE,EQ,C'A')  WAS PROGRAM'S MOVE?
+            MVI   ENDGAME,X'02'  INDICATE PLAYER WIN
+            L     R4,VALYWIN     STORE PLAYER WIN VALUE
+            ST    R4,BORDVALU
+          ELSE
+            MVI   ENDGAME,X'01'  INDICATE PROGRAM WIN
+            L     R4,VALIWIN     STORE PROGRAM WIN VALUE
+            ST    R4,BORDVALU
+          ENDIF
+        ENDIF
+*                                                                       00257000
+*  RELEASE THE PARM BLOCK.
+         LA   R1,85               LOAD PARM BLOCK LENGTH
+         FREECORE                 FREE THE PARM BLOCK
+*                                                                       00266000
+         RRETURN                       RETURN                           00267000
+*
+* CHECK FOR CUTTOFF CONDITION.
+BPRUNECK DS   0H
+          LR    R1,R10        ADDRESS PARMS
+          L     R15,=V(PRUNE)   CALL PRUNE
+          BALR  R14,R15
+          IF (LTR,R0,R0,NZ)     CUTTOFF?
+            LA    R6,32       INDICATE CUTOFF
+          ENDIF
+         BR    R9       RETURN
+         LTORG                                                          00268000
+         DROP                                                           00269000

@@ -1,0 +1,49 @@
+         MACRO                                                          00000100
+         ENDIF                                                          00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.*  MACRO:  ENDIF                                                     * 00000140
+.*                                                                    * 00000150
+.*  FUNCTION:  ENDIF FORMS THE ENDING DELIMITER FOR A IF-COND-ENDIF   * 00000160
+.*      MACRO SEQUENCE.  IT GENERATES END LABELS AND A CON-           * 00000170
+.*      DITIONAL ABEND INSTRUCTION DEPENDING ON THE &ELSE FLAG,       * 00000180
+.*      WHICH INDICATES THE PRESENCE OF A PRECEEDING COND WITH AN     * 00000190
+.*      ELSE ARGUMENT.  IN ADDITION, THE &ARGS FLAG INDICATES TO      * 00000200
+.*      ENDIF WHETHER THE IBM CONCEPT-14 FORMAT IS BEING UTILIZED,    * 00000210
+.*      WHICH ALSO SUPPRESSES THE ABEND GENERATION.  LASTLY, THE      * 00000220
+.*      ENDIF MACRO DECREMENTS THE STACKS POINTER TO CLEAR THE        * 00000230
+.*      STACKS FOR THIS SEQUENCE.                                     * 00000240
+.*                                                                    * 00000250
+.*  PARAMETERS:  NONE.                                                * 00000260
+.*                                                                    * 00000270
+.*  XREF:  MACROS USED - EXLBL                                        * 00000280
+.*                                                                    * 00000290
+.********************************************************************** 00000300
+         GBLB  &FIRSTC            FLAG TO DETECT START OF SEQUENCE      00000310
+         GBLB  &ELSE(50)          STACK TO DETECT $COND ELSE PRESENCE   00000320
+         GBLB  &ARGS(50)          INDICATES SIMPLE IF-ELSE-ENDIF STRUC  00000330
+         GBLB  &EXCODE(50)        THE STACK FOR $IF OR $DO ID           00000340
+         GBLA  &LVLPTR            THE STACKS INDEX                      00000350
+         GBLA  &DOIFEX(50)        THE $DO OR $IF END LABEL STACK        00000360
+         AIF   (&LVLPTR GT 0).CHKF  CHECK INVALID STACK LEVEL           00000370
+         MNOTE 12,'***ERROR: UNMATCHED ENDIF***'                        00000380
+         AGO   .END                                                     00000390
+.CHKF    AIF   (&FIRSTC EQ 0).CHKNXT IF NOT ON, PROCEED NORMALLY        00000400
+         MNOTE 12,'***ERROR: ENDIF IMMEDIATELY FOLLOWS IF OR DO***'     00000410
+&FIRSTC  SETB  0                  TURN OFF &FIRSTC                      00000420
+         AGO   .DEC                                                     00000430
+.CHKNXT  AIF   (&ELSE(&LVLPTR) EQ 1).ABCOM  DONT GENERATE ABEND         00000440
+         AIF   (&ARGS(&LVLPTR) EQ 0).ABND  THEN GENERATE ABEND          00000450
+         EXLBL COND               GENERATE LABEL                        00000460
+         AGO   .ABCOM             BRANCH TO GET LABEL                   00000470
+.ABND    B     @#EX&DOIFEX(&LVLPTR)  BRANCH AROUND ABEND                00000480
+         EXLBL COND               GENERATE LABEL                        00000490
+         ABEND 50,DUMP                                                  00000500
+.ABCOM   AIF   (&EXCODE(&LVLPTR) EQ 1).DECR  THEN MATCH OK              00000510
+         MNOTE 12,'***ERROR: ENDIF PAIRED WITH DO***'                   00000520
+.DECR    EXLBL DOIF               GENERATE ENDIF LABEL                  00000530
+&ELSE(&LVLPTR) SETB  0            TURN &ELSE OFF                        00000540
+&ARGS(&LVLPTR) SETB  0            TURN OFF &ARGS                        00000550
+.DEC     ANOP                                                           00000560
+&LVLPTR  SETA  &LVLPTR-1          DECREMENT STACKS INDEX                00000570
+.END     MEND                                                           00000580

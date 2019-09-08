@@ -1,0 +1,296 @@
+         TITLE '***TSTCHKS PROGRAM***'
+         PRINT NOGEN
+TSTCHKS  XSAVE
+         LA    R10,GPARMS         ADDRESS PARM SET-UP AREA
+         USING GENPARM,R10
+         USING CORECOMM,R2                                              00390001
+*
+* OPEN THE I/O AND WRITE A GREETING.
+         OPEN (INDCB,INPUT,OUTDCB,OUTPUT)   OPEN THE TERM I/O
+         OPEN (OUTFILE,OUTPUT)    OPEN THE PRINT DCB
+         MVC   OUTLINE(24),=C'***WELCOME TO TSTCHKS***'
+         PUT   OUTDCB,OUTBUFF     WRITE AN INITIAL MESSAGE
+*
+* READ THE COLOR OF THE PLAYER'S PIECES.
+         MVC   OUTLINE(34),=C'ENTER COLOR TO PLAY FIRST (R OR B)'
+         PUT   OUTDCB,OUTBUFF     PROMPT FOR PLAY COLOR
+         GET   INDCB,INBUFF       READ THE COLOR OF PLAYER
+         IF (CLI,PCOLOR,EQ,C'R')   PLAYER WANTS RED?
+           MVI   PIECOLOR,C'B'    PROGRAM TAKES BLACK
+         ELSE
+           MVI   PIECOLOR,C'R'    PROGRAM TAKES RED
+         ENDIF
+*
+* GET THE NUMBER OF MOVES TO BE MADE.
+         MVC   OUTLINE(40),=CL40' '
+         MVC   OUTLINE(38),=C'ENTER NUMBER OF MOVES TO BE MADE (XXX)'
+         PUT   OUTDCB,OUTBUFF     PROMPT FOR NUMBER OF MOVES
+         GET   INDCB,INBUFF       READ NUMBER OF MOVES
+* STORE THE INPUT NUMBER OF MOVES.
+         PACK  LWORK+6(2),LEVELNUM(3)  PACK NUMBER OF MOVES
+         CVB   R3,LWORK           CONVERT TO BINARY                     00880001
+         ST    R3,NUMOVE          STORE NUMBER OF MOVES
+*
+* GET THE LOOK-AHEAD LEVEL.
+         MVC   OUTLINE(38),=C'ENTER LEVEL OF PLAY DIFFICULTY (01-10)'
+         PUT   OUTDCB,OUTBUFF     PROMPT FOR LOOK-AHEAD LEVEL
+         GET   INDCB,INBUFF       READ LOOK-AHEAD LEVEL
+* STORE THE INPUT LOOK-AHEAD NUMBER.                                    00860001
+         PACK  LWORK+6(2),LEVELNUM(2)  PACK LEVELNUM                    00870001
+         CVB   R3,LWORK           CONVERT TO BINARY                     00880001
+         AH    R3,=H'-1'          ADJUST FOR PROCESSING
+         ST    R3,LEVELOOK        STORE IN PARM LIST                    00890001
+*                                                                       00400001
+* OBTAIN MONSTER BLOCKS FOR THE PARM SAVE AND THE REG SAVE AREAS.
+         SR    R4,R4              CLEAR R4 FOR MULTIPLY
+         LA    R5,85              LOAD LENGTH OF PARM BLOCK
+         SLA   R3,1       X2, SINCE AT LEAST TWO BLOCKS USED PER LEVEL
+         LA    R3,10(R3)          ADD 10 BLOCKS FOR JUMP MOVE LEVELS
+         MR    R4,R3              COMPUTE MONSTER BLOCK LENGTH
+         GETMAIN R,LV=(R5),SP=1  GET BLOCK FROM SUB-POOL #1
+         L     R2,=V(CORECOMM)    ADDRESS CORECOMM                      00430001
+         ST    R1,BLCKADDR        STORE RETURNED ADDRESS
+         ST    R1,BLCKINDX        STORE INDEX INTO BLOCK
+         ST    R5,BLCKLEN        STORE BLOCK LENGTH
+         LA    R5,72              LOAD LENGTH OF SAVE AREA
+         SR    R4,R4
+         MR    R4,R3              COMPUTE BLOCK LENGTH
+         GETMAIN R,LV=(R5),SP=1
+         ST    R1,SBLKADDR        STORE RETURNED ADDRESS
+         ST    R1,SBLKINDX        STORE INDEX INTO THE BLOCK
+         ST    R5,SBLKLEN         STORE LENGTH                          00470001
+*
+* PROMPT FOR THE BOARD, AND DISPLAY THE INITIAL BOARD.
+         MVC   BOARDIN(12),=C'RRRRRRRRRRRR'  PLACE RED PIECES
+         MVC   BOARDIN+12(8),=CL8' '    PLACE VACANT SQUARES
+         MVC   BOARDIN+20(12),=C'BBBBBBBBBBBB'  PLACE BLACK PIECES
+*
+* PROMPT FOR INPUT BOARD.
+         SR    R6,R6              INIT LOOP COUNTER
+         LA    R8,BOARDIN         ADDRESS THE PARM BOARD
+         LA    R7,ROWCOUNT        SET ROW COUNTER
+         DO WHILE,(CH,R6,LT,=H'8'),AND,(CLI,ENDFLAG,EQ,X'00')
+           MVC   OUTLINE(40),=CL40' '   CLEAR OUTPUT LINE
+           MVC   OUTLINE(25),=C'WANT TO CHANGE BOARD ROW '
+           MVC   OUTLINE+25(1),0(R7)
+           MVC   OUTLINE+26(10),=C'? (Y OR N)'
+           PUT   OUTDCB,OUTBUFF   PROMPT FOR BOARD ROW
+           GET   INDCB,INBUFF     READ THE RESPONSE
+           IF (CLI,ROWCHAR,EQ,C'Y')   USER WANTS TO CHANGE ROW?
+             IF (CLI,0(R7),EQ,C'1'),OR,(CLI,0(R7),EQ,C'3'),OR,         X
+               (CLI,0(R7),EQ,C'5'),OR,(CLI,0(R7),EQ,C'7')
+               LA    R5,ROWCOUNT+1  IF ODD ROW, START PROMPT COUNT AT 2
+             ELSE
+               LA    R5,ROWCOUNT    ELSE, START PROMPT COUNT AT 1
+             ENDIF
+             SR    R9,R9          SET LOOP COUNTER
+             DO WHILE,(CH,R9,LT,=H'4')  REQUEST FOUR LOCATIONS IN ROW
+               MVC   OUTLINE(40),=CL40' '
+               MVC   OUTLINE(25),=C'ENTER PIECE AT LOCATION ('
+               MVC   OUTLINE+25(1),0(R5)   PLACE X COORD
+               MVI   OUTLINE+26,C','
+               MVC   OUTLINE+27(1),0(R7)   PLACE Y COORD
+               MVI   OUTLINE+28,C')'
+               PUT   OUTDCB,OUTBUFF   PROMPT FOR PIECE
+               GET   INDCB,INBUFF     READ INPUT PIECE
+               MVC   0(1,R8),PIECHAR  MOVE PIECE TO BOARD
+               LA    R8,1(R8)         POINT TO NEXT BOARD LOCATION
+               LA    R5,2(R5)         POINT TO NEXT PROMPT CHAR
+               LA    R9,1(R9)         INCREMENT LOOP COUNTER
+             ENDDO
+           ELSE
+               IF (CLI,TERMCHAR,EQ,C'T')   TERMINATE REQUEST?
+                 MVI   ENDFLAG,X'01'   YES - INDICATE IT
+                 MVC   OUTLINE(40),=CL40' '  CLEAR OUTPUT LINE
+                 MVC   OUTLINE(26),=C'TERMINATE REQUEST ACCEPTED'
+                 PUT   OUTDCB,OUTBUFF      WRITE TERMINATE REQUEST ACK
+               ELSE
+                 LA    R8,4(R8)       INCREMENT TO NEXT BOARD ROW
+               ENDIF
+           ENDIF
+           LA    R6,1(R6)         INCREMENT
+           LA    R7,1(R7)
+         ENDDO
+         PUT   OUTFILE,HEADER3     WRITE INITIAL BOARD HEADER
+         PUT   OUTFILE,BLANKL
+         LA    R5,BOARDIN
+         BAL   R2,PRNTBORD        DISPLAY THE INITIAL BOARD
+*                                                                       00490001
+* ENTER PLAY LOOP.
+         MVI   ENDFLAG,X'00'      INDICATE NOT END OF PLAY
+         DO WHILE,(CLI,ENDFLAG,EQ,X'00')  PLAY LOOP
+*
+* INITIALIZE GAME PARMS.
+         MVI   ENDGAME,X'00'      INDICATE NOT END OF GAME              00910001
+         MVI   MOVTYPE,C'A'       INDICATE PGM'S MOVE
+         MVI   MOVMADE,X'00'      INIT MOVE MADE FLAG
+         MVI   JUMPFLG,X'00'      INIT JUMP ONLY FLAG
+         SR    R15,R15                                                  00920001
+         ST    R15,BORDVALU        CLEAR VALUE RETURN                    00940001
+*                                                                       00990001
+*      CALL BOARD TO EVALUATE THE BOARD.                                01000001
+         LA    R1,GPARMS          LOAD PARM ADDRESS                     01010001
+         L     R15,=V(BOARD)   CALL
+         BALR  R14,R15              BOARD                               01030001
+         MVC   BOARDIN(32),BOARDOUT  COPY NEW BOARD
+*                                                                       01090001
+*      PRINT THE OUTPUT BOARD AND ANY END-OF-GAME MESSAGE.              01100001
+         PUT   OUTFILE,BLANKL
+         MVC   OUTLINE(40),=CL40' '
+         MVC   OUTLINE(6),=C'AFTER '
+         IF (CLI,PIECOLOR,EQ,C'R')     SWITCH PIECE COLOR
+           MVI   PIECOLOR,C'B'
+           MVC   OUTLINE+6(6),=C'RED   '
+         ELSE
+           MVI   PIECOLOR,C'R'
+           MVC   OUTLINE+6(6),=C'BLACK '
+         ENDIF
+         MVC   OUTLINE+12(5),=C'MOVE:'
+         PUT   OUTFILE,OUTBUFF
+         PUT   OUTFILE,BLANKL
+         LA    R5,BOARDOUT        ADDRESS BOARD TO BE PRINTED
+         BAL   R2,PRNTBORD        PRINT THE OUTPUT BOARD                01120001
+         IF  (CLI,ENDGAME,EQ,X'01')   PROGRAM WINS GAME?
+           MVC   ENDLBL(14),=C'GAME CONCLUDED'                            01140001
+           PUT   OUTFILE,BLANKL
+           PUT   OUTFILE,ENDMSG    YES ->  PRINT END-OF-GAME MSG        01150001
+           MVI   ENDFLAG,X'01'    INDICATE END OF SESSION
+         ENDIF                                                          01160001
+         IF  (CLI,ENDGAME,EQ,X'02')  PLAYER WINS GAME?
+           MVC   ENDLBL(15),=C'GAME CONCLUDED '                            01180001
+           PUT   OUTFILE,BLANKL
+           PUT   OUTFILE,ENDMSG    YES ->  PRINT END-OF-GAME MSG        01190001
+           MVI   ENDFLAG,X'01'    INDICATE END OF SESSION
+         ENDIF                                                          01200001
+         IF (CLI,ENDFLAG,NE,X'01')   CHECK FOR END OF MOVES
+           L     R15,NUMOVE      DECREMENT NUMBER OF MOVES
+           AH    R15,=H'-1'
+           ST    R15,NUMOVE
+           IF (CH,R15,LE,=H'0')  END OF MOVES?
+             MVI   ENDFLAG,X'01'  INDICATE IT
+           ENDIF
+         ENDIF
+         ENDDO
+*                                                                       01210001
+         CLOSE  (INDCB,,OUTDCB)   CLOSE I/O FILES                       01220001
+         CLOSE (OUTFILE)
+         XRETURN                                                        01230001
+*                                                                       01250001
+*  THIS SUB-ROUTINE PRINTS THE GIVEN BOARD IMAGE IN BORDPARM.           01260001
+*                                                                       01270001
+PRNTBORD DS    0H                                                       01280001
+         PUT   OUTFILE,XCOORDS     WRITE X COORD LINE
+         PUT   OUTFILE,BORDERLN    WRITE TOP LINE                       01300001
+         LA    R3,BORDIMG+1       ADDRESS BOARD PRINT IMAGE             01320001
+         SR    R4,R4              SET LOOP COUNTER                      01330001
+         DO WHILE=(CH,R4,LT,=H'32')  MOVE ALL PIECES
+          IF (CH,R4,EQ,=H'8'),OR,(CH,R4,EQ,=H'16'),OR,(CH,R4,EQ,=H'24')
+            LA    R3,1(R3)        INCREMENT POINTER FOR ODD ROW
+          ENDIF
+          IF (CH,R4,EQ,=H'4'),OR,(CH,R4,EQ,=H'12'),OR,                 X
+               (CH,R4,EQ,=H'20'),OR,(CH,R4,EQ,=H'28')  EVEN ROW?
+            AH    R3,=H'-1'       DECREMENT POINTER FOR EVEN ROW
+          ENDIF
+            MVC   0(1,R3),0(R5)   MOVE THE LOCATION CONTENTS            01350001
+            LA    R5,1(R5)        INCREMENT ALL INDICES                 01360001
+            LA    R3,2(R3)                                              01370001
+            LA    R4,1(R4)                                              01380001
+         ENDDO                                                          01390001
+         LA    R3,BORDIMG         ADDRESS BOARD PRINT IMAGE             01400001
+         SR    R4,R4              SET LOOP COUNTER                      01410001
+         LA    R7,ROWCOUNT        INDEX ROW NUMBERS
+         DO WHILE=(C,R4,LT,=F'8')  PRINT 8 LINES                        01420001
+           MVC   BLINE(1),0(R7)   MOVE ROW NUMBER
+         LA    R5,BORDLINE        ADDRESS BORDLINE
+         SR    R6,R6              SET LOOP COUNTER
+         DO WHILE,(CH,R6,LT,=H'8')  MOVE 8 CHARS IN ROW
+           MVC   0(1,R5),0(R3)     MOVE CHAR
+           LA    R5,2(R5)         INCREMENT
+           LA    R3,1(R3)
+           LA    R6,1(R6)
+         ENDDO
+            PUT   OUTFILE,BLINE       PRINT THE LINE                    01440001
+            LA    R4,1(R4)           INCREMENT INDICES                  01450001
+            LA    R7,1(R7)
+         ENDDO                                                          01470001
+         MVI   BORDERLN,C' '      MOVE CARRIAGE CONTROL                 01480001
+         PUT   OUTFILE,BORDERLN    PRINT LOWER LINE                     01490001
+         BR    R2                 RETURN                                01500001
+         DROP                                                           01510001
+*                                                                       01530001
+GPARMS   DS    85X                PARM LIST FOR BOARD
+*                                                                       01790001
+INDCB    DCB   DDNAME=INPUT,      INPUT DCB                            X01800001
+               MACRF=GM,                                               X01810001
+               DSORG=PS,                                               X01820001
+               RECFM=FB,                                               X01830001
+               LRECL=80,                                               X01840001
+               BLKSIZE=80                                               01850001
+*                                                                       01860001
+OUTDCB   DCB   DDNAME=OUTPUT,     OUTPUT DCB                           X01870001
+               MACRF=PM,                                               X01880001
+               DSORG=PS,                                               X01890001
+               RECFM=FBA,                                              X01900001
+               LRECL=133,                                              X01910001
+               BLKSIZE=133                                              01920001
+*                                                                       01930001
+OUTFILE  DCB   DDNAME=OUTFILE,     OUTPUT DCB                          X01870001
+               MACRF=PM,                                               X01880001
+               DSORG=PS,                                               X01890001
+               RECFM=FBA,                                              X01900001
+               LRECL=133,                                              X01910001
+               BLKSIZE=133                                              01920001
+*                                                                       01930001
+INBUFF   DS    0H                 INPUT BUFFER AREA
+PIECHAR  DS    32C                INPUT PIECE
+         DS    48C
+         ORG INBUFF
+PCOLOR   DS    C                  PIECE COLOR OF PLAYER: 'R' OR 'B'     01970001
+         ORG INBUFF
+LEVELNUM DS    CL2                LEVEL-LOOK NUMBER                     01990001
+         ORG INBUFF
+BRDINLIN DS    CL8                INPUT BOARD LINE
+         ORG INBUFF
+TERMCHAR DS    C                  TERMINATE CHARACTER
+         ORG INBUFF
+ROWCHAR  DS    C                  ROW RESPONSE CHARACTER
+         ORG
+ROWCOUNT DC    C'12345678'        BOARD ROW PROMPT COUNTER
+ENDFLAG  DS    X                  END OF LOOP FLAG
+*                                                                       02010001
+LWORK    DC    D'0'               CVB CONVERSION AREA                   02020001
+*                                                                       02030001
+HEADER1  DC    C' '               INPUT BOARD HEADER LABEL              02040001
+         DC    C'BEFORE MOVE:'                                          02050001
+         DC    CL120' '                                                 02060001
+*                                                                       02070001
+HEADER2  DC    C' '               OUTPUT BOARD HEADER LABEL             02080001
+         DC    C'AFTER MOVE:'                                           02090001
+         DC    CL121' '                                                 02100001
+HEADER3  DC    C' '               INITIAL BOARD HEADER LABEL             02080001
+         DC    C'INITIAL BOARD:'
+         DC    CL121' '                                                 02100001
+XCOORDS  DC    C' '
+         DC    C' 1 2 3 4 5 6 7 8 '
+         DC    CL120' '
+BLANKL   DC    CL133' '
+*                                                                       02110001
+BORDERLN DC    C'  '              BOTTOM/TOP LINE FOR BOARD PRINT       02120001
+         DC    15C'-'                                                   02130001
+         DC    CL122' '                                                 02140001
+*                                                                       02150001
+BORDIMG  DC    64C'*'             BOARD PRINT IMAGE                     02160001
+*                                                                       02170001
+BLINE    DC    C' '               BOARD PRINT LINE                      02180001
+         DC    C'|'                                                     02190001
+BORDLINE DC    16C'|'             BOARD PRINT LINE DATA                 02200001
+         DC    CL122' '                                                 02220001
+*                                                                       02230001
+ENDMSG   DC    C' '               END OF GAME MESSAGE                   02240001
+ENDLBL   DS    CL12               MESSAGE AREA                          02250001
+         DC    CL120' '                                                 02260001
+OUTBUFF  DC    C' '               OUTPUT MESSAGE BUFFER
+OUTLINE  DC    CL132' '
+NUMOVE  DS    F                  NUMBER OF MOVES
+         LTORG
+         DROP

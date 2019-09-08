@@ -1,0 +1,44 @@
+         MACRO                                                          00000100
+         PUSHNEST &TYPE                                                 00000110
+.********************************************************************** 00000120
+.*                                                                    * 00000130
+.*  MACRO:  PUSHNEST                                                  * 00000140
+.*                                                                    * 00000150
+.*  FUNCTION:  THE PUSHNEST MACRO IS AN INTERNALLY INVOKED SUPPORT    * 00000160
+.*      MACRO WHICH PERFORMS THE INITIAL LABEL STACKING OPERATIONS    * 00000170
+.*      NECESSARY TO ESTABLISH AN IF-COND-ENDIF OR A DO-COND-ENDDO    * 00000180
+.*      SEQUENCE.  THIS INCLUDES STACKING A UNIQUE DOIF END LABEL     * 00000190
+.*      FOR THE ENDIF OR DO MACROS, AND STACKING A LABEL TO BE USED   * 00000200
+.*      BY THE INTERVENING CONDS.  THE TYPE CODE (IF OR DO) IS ALSO   * 00000210
+.*      STACKED TO ALLOW SUBSEQUENT MACRO COMPATABILITY CHECKING      * 00000220
+.*      DURING ENDIF OR ENDDO PROCESSING.                             * 00000230
+.*                                                                    * 00000240
+.*  PARAMETERS:                                                       * 00000250
+.*                                                                    * 00000260
+.*     &TYPE  INDICATES THE TYPE OF INVOCATION.  CAN BE ONE OF THE    * 00000270
+.*            FOLLOWING:                                              * 00000280
+.*            IF - PUSHNEST INVOKED FROM IF MACRO.                    * 00000290
+.*            DO - PUSHNEST INVOKED FROM DO MACRO.                    * 00000300
+.*                                                                    * 00000310
+.********************************************************************** 00000320
+         GBLA  &EXGEN             THE LABEL COUNTER                     00000330
+         GBLA  &LVLPTR            THE STACKS INDEX                      00000340
+         GBLA  &CONDEX(50)        THE &COND LABEL STACK                 00000350
+         GBLA  &DOIFEX(50)        THE $DO OR $ENDIF END LABEL STACK     00000360
+         GBLB  &EXCODE(50)        STACK OF MACRO TYPE CODES:            00000370
+.*                                  0 = $DO                             00000380
+.*                                  1 = $IF                             00000390
+         AIF   (&LVLPTR LT 50).ADDSTK  IF NOT FULL PROCEED NORMALLY     00000400
+         MNOTE 12,'***ERROR: NESTING LEVEL EXCEEDS CAPACITY***'         00000410
+         AGO   .END                                                     00000420
+.ADDSTK  ANOP                                                           00000430
+&LVLPTR  SETA  &LVLPTR+1          INCREMENT &LVLPTR FOR NEXT ENTRY      00000440
+&DOIFEX(&LVLPTR) SETA  &EXGEN     PUT &EXGEN COUNTER VALUE ON &DOIFEX   00000450
+&CONDEX(&LVLPTR) SETA  &EXGEN+1   PUT NEXT &EXGEN ON &CONDEX            00000460
+&EXGEN   SETA  &EXGEN+2           SET UP NEXT UNIQUE VALUE              00000470
+         AIF   ('&TYPE' EQ 'IF').IFCALL  IF NOT IF PROCESS DO           00000480
+&EXCODE(&LVLPTR) SETB  0          PUT DO CODE ON &EXCODE                00000490
+         AGO   .END                                                     00000500
+.IFCALL  ANOP                                                           00000510
+&EXCODE(&LVLPTR) SETB  1          PUT IF CODE VALUE ON &EXCODE          00000520
+.END     MEND                                                           00000530
